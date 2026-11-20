@@ -15,6 +15,8 @@
 - Initial bootstrap hit a subprocess pipe timeout; fixed pg_ctl inherited output handles and restarted only isolated cluster.
 
 Foundation commit: e1ea24b — Establish PostgreSQL schema and signed ledger proof primitives.
+Implementation/security-test commit: f070c83 — Implement signed corrections, QR verification and PostgreSQL attack tests.
+Final documentation commit follows; use `git log -3 --oneline` for its exact ID. No commits pushed.
 
 ## Phases 3–5
 - Implemented authenticated HTTP routes, role/ownership checks, publication, immutable historical versions, signed receipts and checkpoint evidence.
@@ -37,5 +39,6 @@ Foundation commit: e1ea24b — Establish PostgreSQL schema and signed ledger pro
 - Migration status is up to date; offline CLI verification and checkpoint export passed, including caller-pinned file witness.
 - OpenAPI JSON parsed: 19 operations, 37 resolved references. Dependency audit: initial 4 high transitive issues resolved by tested overrides, final 0 vulnerabilities.
 - Branch backend/h8-core; all commits local, no push authorized. No known failing automated tests.
+- Staged source/config secret scan passed across 30 tracked files (actual local credentials/private-key headers checked without printing secrets); .env and .local remain ignored.
 
 Highest priority after final checks: deliver stable API contract to frontend and wire independently pinned verification into its result screen.

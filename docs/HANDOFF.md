@@ -1,6 +1,7 @@
 # Operational handoff
 
 Current objective: build the backend with real cryptographic proofs and PostgreSQL tests.
+Core implementation is tested; current objective is frontend-independent verification integration and external witness configuration, not rewriting the backend.
 Read AGENTS.md. Branch backend/h8-core; never push without approval.
 Environment: Windows, PostgreSQL binaries C:/Program Files/PostgreSQL/18/bin, Node 24.
 Existing PostgreSQL service requires credentials; use a separately initialized .local cluster on 55432.
@@ -11,3 +12,5 @@ API smoke test, migration status, offline CLI and checkpoint export passed. Post
 Exact next task: coordinate with frontend on docs/API.md + docs/openapi.json, implement browser-side verification using an independently pinned institution key and shared canonical test vectors; do not alter teammate branch without direction. Then configure/test a genuinely independently controlled checkpoint channel with user permission. Existing local keys/credentials stay ignored. Do not reinitialize cluster or rotate keys silently.
 Run: npm run dev:setup (if DB stopped), npm run db:generate, npm run db:migrate, npm run db:seed, npm test, npm start. Credentials .local/demo-credentials.json; never print or commit them.
 Known failures: none in automated suite. Limitations: no browser verifier, remote witness, production custody/TLS or physical QR test. User action later: choose independently controlled checkpoint channel and reachable API deployment; permission required before any Git push.
+
+Local implementation commits: e1ea24b (foundation), f070c83 (HTTP/security integration). Final docs commit is at/after these; inspect git log. Source secret check passed; no secrets committed. All repository work remains local on backend/h8-core.
