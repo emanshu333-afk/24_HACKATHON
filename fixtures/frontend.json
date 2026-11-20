@@ -1,0 +1,7 @@
+{
+  "note": "Synthetic UI shapes, not cryptographic evidence. Replace IDs with GET /students and /exams responses. Login credentials are generated locally, never committed.",
+  "marks": [{"subject":"CS101","score":86,"max":100},{"subject":"MA101","score":79,"max":100}],
+  "correctionRequest": {"baseVersion":1,"marks":[{"subject":"CS101","score":91,"max":100},{"subject":"MA101","score":79,"max":100}],"reason":"Recount confirmed omitted five-mark answer"},
+  "verificationStatuses": ["VALID_CURRENT","VALID_HISTORICAL","INVALID","INCOMPLETE"],
+  "tamperFinding": {"code":"DATABASE_FIELD_MISMATCH","resultId":"synthetic-result-id","version":1,"field":"result.marks.0.score","expected":86,"actual":99}
+}

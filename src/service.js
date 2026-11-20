@@ -30,8 +30,9 @@ export class LedgerService {
     const body = { format: FORMAT, id: randomUUID(), sequence, type: correction ? 'CORRECT' : 'PUBLISH', resultId: result.id, version: data.version, data, commitment, previousHash: existing.events.at(-1)?.hash || ZERO, signer: this.keys.signer, issuedAt: new Date().toISOString(), correction };
     const hash = digest('event', body);
     const event = { body, hash, signature: signValue('event-signature', { hash }, this.keys.privateKey) };
-    await tx.ledgerEvent.create({ data: { id: body.id, sequence, versionId: version.id, ...event } });
     const checkpoint = signed('checkpoint', { format: FORMAT, sequence, headHash: hash, signer: this.keys.signer, issuedAt: body.issuedAt }, this.keys.privateKey);
+    if (verifyEvidence({ events: [...existing.events, event], checkpoint }, this.keys.publicKey, { witness: this.witness }).status !== 'VALID_CURRENT') throw new Problem('PROPOSED_EVENT_INVALID');
+    await tx.ledgerEvent.create({ data: { id: body.id, sequence, versionId: version.id, ...event } });
     await tx.checkpoint.create({ data: { sequence, ...checkpoint } });
     return { resultId: result.id, version: data.version, receipt: this.receipt(event), checkpoint };
   }
@@ -93,9 +94,10 @@ export class LedgerService {
   async getReceipt(resultId, version) {
     const row = await this.db.resultVersion.findUnique({ where: { resultId_version: { resultId, version } }, include: { event: true } });
     if (!row?.event) throw new Problem('VERSION_NOT_FOUND', 404);
+    if (row.event.body?.resultId !== resultId || row.event.body?.version !== version) throw new Problem('RESULT_INTEGRITY_FAILURE');
     // Never mint a fresh authentic receipt for a database-forged event.
     const proof = await this.verify();
-    if (proof.verification.status !== 'VALID_CURRENT') throw new Problem('LEDGER_INTEGRITY_FAILURE');
+    if (proof.verification.status !== 'VALID_CURRENT' || !proof.evidence.events.some(e => canonical(e) === canonical({ body: row.event.body, hash: row.event.hash, signature: row.event.signature }))) throw new Problem('LEDGER_INTEGRITY_FAILURE');
     return this.receipt(row.event);
   }
   async audit() {
@@ -103,18 +105,21 @@ export class LedgerService {
       const evidence = await this.evidence(tx);
       const verification = verifyEvidence(evidence, this.keys.publicKey, { witness: this.witness });
       const findings = [...verification.failures];
+      const safeDigest = (domain, value) => { try { return digest(domain, value); } catch { return null; } };
       const events = await tx.ledgerEvent.findMany({ include: { version: true }, orderBy: { sequence: 'asc' } });
       const latest = new Map();
       const compare = (expected, actual, path, detail) => {
-        if (canonical(expected) === canonical(actual)) return;
+        try { if (canonical(expected) === canonical(actual)) return; } catch { /* Noncanonical DB data is a mismatch, not a server error. */ }
         if (expected && actual && typeof expected === 'object' && typeof actual === 'object') {
           for (const k of new Set([...Object.keys(expected), ...Object.keys(actual)])) compare(expected[k] ?? null, actual[k] ?? null, `${path}.${k}`, detail);
         } else findings.push({ code: 'DATABASE_FIELD_MISMATCH', ...detail, field: path, expected, actual });
       };
       for (const e of events) {
-        const b = e.body, detail = { resultId: b.resultId, version: b.version, eventId: e.id };
+        const b = e.body;
+        if (!b || typeof b !== 'object' || !b.data || typeof b.data !== 'object') { findings.push({ code: 'MALFORMED_EVENT', eventId: e.id, sequence: e.sequence }); continue; }
+        const detail = { resultId: b.resultId, version: b.version, eventId: e.id };
         // Only use authenticated event data as an expected published value.
-        if (digest('event', b) !== e.hash || !verifyValue('event-signature', { hash: e.hash }, e.signature, this.keys.publicKey)) continue;
+        if (safeDigest('event', b) !== e.hash || !verifyValue('event-signature', { hash: e.hash }, e.signature, this.keys.publicKey)) continue;
         compare(b.id, e.id, 'event.id', detail);
         compare(b.sequence, e.sequence, 'event.sequence', detail);
         compare(b.data, e.version.data, 'version.data', detail);
@@ -132,15 +137,15 @@ export class LedgerService {
       }
       for (const v of await tx.resultVersion.findMany({ where: { event: null } })) findings.push({ code: 'UNCOMMITTED_VERSION', resultId: v.resultId, version: v.version });
       for (const cp of await tx.checkpoint.findMany()) {
-        if (cp.sequence !== cp.body.sequence || !verifyValue('checkpoint', cp.body, cp.signature, this.keys.publicKey) || evidence.events[cp.sequence - 1]?.hash !== cp.body.headHash) findings.push({ code: 'STORED_CHECKPOINT_MISMATCH', sequence: cp.sequence });
+        if (!cp.body || cp.sequence !== cp.body.sequence || !verifyValue('checkpoint', cp.body, cp.signature, this.keys.publicKey) || evidence.events[cp.sequence - 1]?.hash !== cp.body.headHash) findings.push({ code: 'STORED_CHECKPOINT_MISMATCH', sequence: cp.sequence });
       }
       for (const p of await tx.correctionProposal.findMany({ include: { approvals: true } })) {
-        if (digest('proposal', p.body) !== p.digest || p.body.id !== p.id || p.body.resultId !== p.resultId || p.body.baseVersion !== p.baseVersion) findings.push({ code: 'PROPOSAL_TAMPERED', proposalId: p.id });
+        if (!p.body || safeDigest('proposal', p.body) !== p.digest || p.body.id !== p.id || p.body.resultId !== p.resultId || p.body.baseVersion !== p.baseVersion) findings.push({ code: 'PROPOSAL_TAMPERED', proposalId: p.id });
         for (const a of p.approvals) {
           const cert = this.keys.registry[a.userId];
           if (!cert || !verifyValue('approval', { proposalDigest: p.digest }, a.signature, cert.body.publicKey)) findings.push({ code: 'INVALID_STORED_APPROVAL', proposalId: p.id, userId: a.userId });
         }
-        const appliedEvent = evidence.events.find(e => e.body.correction?.proposal.id === p.id);
+        const appliedEvent = evidence.events.find(e => e.body?.correction?.proposal?.id === p.id);
         if (p.applied !== Boolean(appliedEvent) || (appliedEvent && (canonical(appliedEvent.body.correction.proposal) !== canonical(p.body) || p.approvals.length !== 2))) findings.push({ code: 'CORRECTION_STATE_MISMATCH', proposalId: p.id });
       }
       return { status: findings.length ? 'INVALID' : 'VALID', findings, freshness: verification.freshness, checkpointSequence: verification.checkpointSequence };
