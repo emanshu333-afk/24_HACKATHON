@@ -2,7 +2,9 @@ import { demoReference, results } from './demo'
 import type { Verification } from './model'
 import { apiBaseUrl } from './http'
 
-export const mockMode = (import.meta.env.VITE_MOCK_MODE ?? 'true') === 'true'
+import { sampleBase } from './sample'
+
+export const mockMode = Boolean(sampleBase) || (import.meta.env.VITE_MOCK_MODE ?? 'true') === 'true'
 export { apiBaseUrl }
 
 export function demoVerification(ref: string): Verification {

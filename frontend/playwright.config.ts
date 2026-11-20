@@ -10,8 +10,8 @@ export default defineConfig({
   use: { baseURL: 'http://127.0.0.1:4173', channel: process.env.PLAYWRIGHT_CHANNEL || undefined },
   webServer: [
     { command: 'npm run dev -- --host 127.0.0.1 --port 4173 --strictPort', url: 'http://127.0.0.1:4173', env: { VITE_MOCK_MODE: 'true' } },
-    { command: 'npm run dev -- --host 127.0.0.1 --port 4174 --strictPort', url: 'http://127.0.0.1:4174', env: { VITE_MOCK_MODE: 'false', VITE_API_BASE_URL: '' } },
-    ...(vectors ? [{ command: 'npm run dev -- --host 127.0.0.1 --port 4175 --strictPort', url: 'http://127.0.0.1:4175', env: { VITE_MOCK_MODE: 'false', VITE_API_BASE_URL: '/fixture-api', VITE_INSTITUTION_PUBLIC_KEY: vectors.publicKey.replace(/\n/g, '\\n') } }] : []),
-    ...(publicApi ? [{ command: 'npm run dev -- --host localhost --port 5173 --strictPort', url: 'http://localhost:5173', env: { VITE_MOCK_MODE: 'false', VITE_API_BASE_URL: publicApi, VITE_INSTITUTION_PUBLIC_KEY: (publicKey ?? '').replace(/\r?\n/g, '\\n') } }] : []),
+    { command: 'npm run dev -- --host 127.0.0.1 --port 4174 --strictPort', url: 'http://127.0.0.1:4174', env: { VITE_MOCK_MODE: 'false', VITE_API_URL: '' } },
+    ...(vectors ? [{ command: 'npm run dev -- --host 127.0.0.1 --port 4175 --strictPort', url: 'http://127.0.0.1:4175', env: { VITE_MOCK_MODE: 'false', VITE_API_URL: '/fixture-api', VITE_INSTITUTION_PUBLIC_KEY: vectors.publicKey.replace(/\n/g, '\\n') } }] : []),
+    ...(publicApi ? [{ command: 'npm run dev -- --host localhost --port 5173 --strictPort', url: 'http://localhost:5173', env: { VITE_MOCK_MODE: 'false', VITE_API_URL: publicApi, VITE_INSTITUTION_PUBLIC_KEY: (publicKey ?? '').replace(/\r?\n/g, '\\n') } }] : []),
   ],
 })

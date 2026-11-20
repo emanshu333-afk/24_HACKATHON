@@ -148,3 +148,61 @@ test('live mode without backend shows no mock marks or private workspace', async
   await page.goto('http://127.0.0.1:4174/student/marksheet/VM-SP26-017-V1')
   await expect(page.getByRole('alert')).toHaveText('Marksheet unavailable.')
 })
+
+test('sample workspace opens from the live site without contacting the API', async ({ page }) => {
+  const remoteRequests: string[] = []
+  page.on('request', request => {
+    if (!request.url().startsWith('http://127.0.0.1:4174/')) remoteRequests.push(request.resourceType())
+  })
+  await page.goto('http://127.0.0.1:4174/')
+  await page.getByRole('link', { name: 'Explore sample workspace' }).click()
+  await expect(page.getByRole('heading', { name: 'Sample workspace' })).toBeVisible()
+  await page.getByRole('link', { name: /Printable marksheet/ }).click()
+  await page.getByRole('link', { name: 'Open sample verification' }).click()
+  await expect(page).toHaveURL(/\/sample\/verify\?ref=/)
+  await expect(page.getByText('DEMO MODE', { exact: true })).toBeVisible()
+  expect(remoteRequests).toEqual([])
+})
+
+test('every sample directory link opens a dedicated page and survives refresh', async ({ page }) => {
+  test.setTimeout(90_000)
+  const headings = [
+    'Sign in to VeriMark', 'My account', 'Integrity overview', 'Students', 'Exams',
+    'Publish results', 'Results', 'Your exam results', 'Result details', 'Statement of Marks',
+    'Verify a result', 'Correction requests', 'Correction detail', 'First approval',
+    'Second approval', 'Tamper Detection Lab', 'Publication history', 'Ledger explorer', 'Audit reports',
+  ]
+  const home = 'http://127.0.0.1:4174/sample/'
+  await page.goto(home)
+  const links = page.locator('.sample-sections a')
+  await expect(links).toHaveCount(headings.length)
+  const destinations = await links.evaluateAll(items => items.map(item => item.getAttribute('href')))
+  expect(new Set(destinations).size).toBe(headings.length)
+  for (const [index, heading] of headings.entries()) {
+    await links.nth(index).click()
+    const title = page.getByRole('heading', { level: 1, name: heading, exact: true })
+    await expect(title).toBeVisible()
+    await page.reload()
+    await expect(title).toBeVisible()
+    await page.goBack()
+    await expect(page.getByRole('heading', { name: 'Sample workspace' })).toBeVisible()
+  }
+})
+
+test('demo account choices open the corresponding sample workspaces without login', async ({ page }) => {
+  const choices = [
+    ['Administrator', 'Integrity overview'], ['Student', 'Your exam results'],
+    ['Approver A', 'First approval'], ['Approver B', 'Second approval'], ['Auditor', 'Audit reports'],
+  ]
+  const authRequests: string[] = []
+  page.on('request', request => {
+    if (new URL(request.url()).pathname === '/auth/login') authRequests.push(request.method())
+  })
+  for (const [role, title] of choices) {
+    await page.goto('http://127.0.0.1:4174/login')
+    await page.getByRole('navigation', { name: 'Demo accounts' }).getByRole('link', { name: new RegExp(role) }).click()
+    await expect(page).toHaveURL(/\/sample\//)
+    await expect(page.getByRole('heading', { level: 1, name: title, exact: true })).toBeVisible()
+  }
+  expect(authRequests).toEqual([])
+})

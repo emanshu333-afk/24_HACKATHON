@@ -27,3 +27,12 @@
   .technical-values { grid-template-columns: 1fr; }
   .public-nav a.nav-text { padding-block: .3rem; }
 }
+
+.sample-sections { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 1rem; align-items: start; }
+.sample-sections h2 { font-size: 1.35rem; margin-top: 0; }
+.sample-sections ul { margin: 0; padding: 0; list-style: none; }
+.sample-sections li { border-top: 1px solid var(--line); }
+.sample-sections a { display: flex; align-items: center; gap: .9rem; padding: 1rem .25rem; color: inherit; text-decoration: none; }
+.sample-sections a:hover strong, .sample-sections a:focus-visible strong { text-decoration: underline; }
+.sample-sections svg { color: var(--color-accent); }
+.sample-sections small { display: block; color: var(--color-muted); margin-top: .2rem; font-size: .875rem; }

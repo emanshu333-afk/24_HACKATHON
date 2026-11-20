@@ -1,15 +1,164 @@
-import { ArrowDown, ArrowRight, BadgeCheck, Check, Fingerprint, GitBranch, LockKeyhole, QrCode, ScanLine, ShieldCheck } from 'lucide-react'
+import { ArrowDown, ArrowRight, Fingerprint, GitBranch, LockKeyhole, QrCode, ScanLine, ShieldCheck } from 'lucide-react'
 import { Link, Outlet } from 'react-router-dom'
-import { Brand, Chip } from '../components/ui'
+import { Brand } from '../components/ui'
+import { PublicationPreview } from '../components/PublicationPreview'
 import { mockMode } from '../services/api'
 
-export function PublicLayout() { return <><header className="public-nav no-print"><div className="container nav-content"><Brand /><nav aria-label="Public navigation"><Link className="nav-text" to="/student">Student portal</Link><Link className="nav-text" to="/admin">Staff workspace</Link><Link className="btn secondary compact" to="/verify">Verify a result <ArrowRight size={16} /></Link></nav></div></header><main id="main"><Outlet /></main><footer className="public-footer no-print"><div className="container"><Brand /><span>Every Mark Has Proof.</span><Link to="/verify">Public verification</Link></div></footer></> }
+export function PublicLayout() {
+  return (
+    <>
+      <header className="public-nav no-print">
+        <div className="container nav-content">
+          <Brand />
+          <nav aria-label="Public navigation">
+            <Link className="nav-text" to="/student">Student portal</Link>
+            <Link className="nav-text" to="/admin">Staff workspace</Link>
+            <Link className="nav-text" to="/how-verification-works">Architecture</Link>
+            <Link className="nav-text" to="/trust">Trust model</Link>
+            <Link className="btn secondary compact nav-cta" to="/verify">
+              Verify a result <ArrowRight size={15} aria-hidden="true" />
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      <main id="main">
+        <Outlet />
+      </main>
+
+      <footer className="public-footer no-print">
+        <div className="container">
+          <div className="footer-brand-col">
+            <Brand />
+            <p className="footer-tagline">
+              Cryptographic academic integrity platform. Tamper-evident publications, dual-signature governance, and client-side proof verification.
+            </p>
+          </div>
+          <div className="footer-nav-col">
+            <div className="footer-group">
+              <strong>Verification</strong>
+              <Link to="/verify">Public verification</Link>
+              <Link to="/how-verification-works">How verification works</Link>
+              <Link to="/trust">Trust & security model</Link>
+            </div>
+            <div className="footer-group">
+              <strong>Workspaces</strong>
+              <Link to="/student">Student portal</Link>
+              <Link to="/admin">Staff workspace</Link>
+              <Link to="/login">Institution sign-in</Link>
+            </div>
+          </div>
+        </div>
+        <div className="footer-bottom-bar">
+          <div className="container footer-bottom-inner">
+            <span>VeriMark Academic Trust Platform</span>
+            <span>Ed25519 Signatures · Append-Only Ledger · Zero-Login Client Verification</span>
+          </div>
+        </div>
+      </footer>
+    </>
+  )
+}
 
 const steps = [
-  { icon: Fingerprint, title: 'Publish with evidence', info: 'A commitment binds the marks to a specific publication. A ledger and signed checkpoint provide evidence of when that version was recorded.' },
-  { icon: QrCode, title: 'Verify from the marksheet', info: 'Scan the printed QR or enter the publication reference. Verification checks the evidence behind that exact version.' },
-  { icon: GitBranch, title: 'Correct without erasing', info: 'Two distinct authorized signers must approve a correction. The reason and earlier result remain visible in the history.' },
+  {
+    icon: Fingerprint,
+    title: 'Publish with evidence',
+    info: 'A commitment binds the marks to a specific publication. A ledger and signed checkpoint provide evidence of when that version was recorded.'
+  },
+  {
+    icon: QrCode,
+    title: 'Verify from the marksheet',
+    info: 'Scan the printed QR or paste the receipt from the marksheet. Verification checks the evidence behind that exact version.'
+  },
+  {
+    icon: GitBranch,
+    title: 'Correct without erasing',
+    info: 'Two distinct authorized signers must approve a correction. The reason and earlier result remain visible in the history.'
+  },
 ]
-export function Landing() { return <><section className="hero"><div className="container hero-grid"><div><div className="overline"><ShieldCheck size={15} /> EXAM RESULT INTEGRITY</div><h1>Every mark<br />has <em>proof.</em></h1><p className="hero-copy">Give students a way to prove what was published. VeriMark makes result verification, authorized corrections, and integrity audits understandable.</p><div className="actions"><Link className="btn" to="/verify"><ScanLine size={19} /> Verify Result <ArrowRight size={18} /></Link>{mockMode && <Link className="btn secondary" to="/admin/integrity">Explore the demo</Link>}</div><p className="hero-note"><LockKeyhole size={15} /> Public verification requires no student login.</p></div>
-  <div className="proof-art" aria-label="Illustration of a publication receipt"><div className="art-grid" /><div className="art-orb" /><div className="art-top"><span><span className="dot" /> VERIMARK / EVIDENCE</span><span>01 — 03</span></div><div className="receipt"><div className="receipt-head"><div className="mini-logo"><ShieldCheck size={24} /></div><div><span>PUBLICATION RECORD</span><strong>Semester II Finals</strong></div><Chip tone="teal">Sample</Chip></div><div className="receipt-ref"><span>RESULT REFERENCE</span><code>VM-SP26-017-V1</code></div><div className="receipt-list">{['Result commitment', 'Ledger inclusion', 'Signed checkpoint'].map(label => <div key={label}><span><Check size={14} /> {label}</span><span>CHECK</span></div>)}</div></div><div className="art-bottom"><BadgeCheck size={16} /> Evidence checklist · illustration only</div></div>
-  </div></section><div className="trust-strip"><div className="container"><span><Fingerprint size={19} /> Versioned result evidence</span><span><QrCode size={19} /> QR-ready marksheets</span><span><ShieldCheck size={19} /> Dual approval for changes</span></div></div><section className="container how"><div className="eyebrow"><ArrowDown size={14} /> THE VERIMARK WORKFLOW</div><h2>From publication to proof</h2><p>Evidence at every step, from the original marks to the latest authorized correction.</p><div className="feature-grid">{steps.map(({ icon: Icon, title, info }, i) => <article key={title} className="panel feature"><div><span className="icon-tile"><Icon size={22} /></span><span className="step">0{i + 1}</span></div><h3>{title}</h3><p>{info}</p></article>)}</div><div className="trust-panel"><ShieldCheck size={30} /><div><h3>What makes a result trustworthy?</h3><p>A QR code is a pointer, not proof. A verified result needs evidence that the marks match the publication, the signature and checkpoint are trusted, and the ledger identifies that version.</p></div><Link to="/verify" className="btn secondary">Open verification <ArrowRight size={16} /></Link></div></section></> }
+
+export function Landing() {
+  return (
+    <>
+      <section className="hero">
+        <div className="container hero-grid">
+          <div className="hero-text-block">
+            <div className="overline">
+              <ShieldCheck size={14} aria-hidden="true" /> EXAM RESULT INTEGRITY
+            </div>
+            <h1>
+              Every mark<br /> has <em>proof.</em>
+            </h1>
+            <p className="hero-copy">
+              Publish exam results, trace every correction, and check a marksheet against its signed publication record.
+            </p>
+            <div className="actions">
+              <Link className="btn" to="/verify">
+                <ScanLine size={18} aria-hidden="true" /> Verify Result <ArrowRight size={17} aria-hidden="true" />
+              </Link>
+              {!mockMode && (
+                <a className="btn secondary" href="/sample/">
+                  Explore sample workspace
+                </a>
+              )}
+              {mockMode && (
+                <Link className="btn secondary" to="/admin/integrity">
+                  Explore the demo
+                </Link>
+              )}
+            </div>
+            <p className="hero-note">
+              <LockKeyhole size={14} aria-hidden="true" /> Public verification requires no student login.
+            </p>
+          </div>
+          <div className="hero-visual-block">
+            <PublicationPreview />
+          </div>
+        </div>
+      </section>
+
+      <div className="trust-strip">
+        <div className="container trust-strip-inner">
+          <span><Fingerprint size={18} aria-hidden="true" /> Versioned result evidence</span>
+          <span><QrCode size={18} aria-hidden="true" /> QR-ready marksheets</span>
+          <span><ShieldCheck size={18} aria-hidden="true" /> Dual approval for changes</span>
+        </div>
+      </div>
+
+      <section className="container how">
+        <div className="eyebrow"><ArrowDown size={14} aria-hidden="true" /> THE VERIMARK WORKFLOW</div>
+        <h2>From publication to proof</h2>
+        <p>Evidence at every step, from the original marks to the latest authorized correction.</p>
+
+        <div className="feature-grid">
+          {steps.map(({ icon: Icon, title, info }, idx) => (
+            <article key={title} className="panel feature">
+              <div className="feature-head">
+                <span className="icon-tile"><Icon size={20} aria-hidden="true" /></span>
+                <span className="step-count">0{idx + 1}</span>
+              </div>
+              <h3>{title}</h3>
+              <p>{info}</p>
+            </article>
+          ))}
+        </div>
+
+        <div className="trust-panel">
+          <div className="trust-panel-icon" aria-hidden="true">
+            <ShieldCheck size={28} />
+          </div>
+          <div className="trust-panel-content">
+            <h3>What makes a result trustworthy?</h3>
+            <p>
+              A QR code is a pointer, not proof. A verified result needs evidence that the marks match the publication, the signature and checkpoint are trusted, and the ledger identifies that version.
+            </p>
+          </div>
+          <Link to="/verify" className="btn secondary trust-panel-btn">
+            Open verification <ArrowRight size={15} aria-hidden="true" />
+          </Link>
+        </div>
+      </section>
+    </>
+  )
+}

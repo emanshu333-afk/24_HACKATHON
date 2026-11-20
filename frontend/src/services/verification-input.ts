@@ -27,7 +27,7 @@ export function readVerificationInput(raw: string, { demo = false, origin = wind
   try {
     const url = new URL(value)
     if (url.username || url.password || url.hash) return null
-    const frontend = url.origin === origin && url.pathname === '/verify'
+    const frontend = url.origin === origin && (url.pathname === '/verify' || (demo && url.pathname === '/sample/verify'))
     const api = apiBase ? new URL(`${apiBase}/verify`, origin) : null
     const backend = api && url.origin === api.origin && url.pathname === api.pathname
     if (!frontend && (demo || !backend)) return null

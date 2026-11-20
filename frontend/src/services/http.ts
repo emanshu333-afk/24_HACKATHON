@@ -1,11 +1,14 @@
 import type { ApiError, ApprovalRequest, ApprovalResponse, CorrectionDetails, CorrectionHistory, CorrectionProposal, CorrectionRequest, Examination, IntegrityAudit, LedgerPage, LoginRequest, LoginResponse, Me, PublicationResponse, PublishRequest, ReceiptResponse, ResultListItem, Student, VerificationResponse } from './wire'
 
-export const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').trim().replace(/\/$/, '')
+import { sampleBase } from './sample'
+
+export const apiBaseUrl = (import.meta.env.VITE_API_URL ?? import.meta.env.VITE_API_BASE_URL ?? '').trim().replace(/\/$/, '')
 export class HttpError extends Error {
   constructor(public status: number, public code: string) { super(code) }
 }
 type Options = { token?: string; method?: 'POST'; body?: object; signal?: AbortSignal }
 async function request<T>(path: string, { token, method, body, signal }: Options = {}): Promise<T> {
+  if (sampleBase) throw new HttpError(0, 'SAMPLE_WORKSPACE')
   if (!apiBaseUrl) throw new HttpError(0, 'API_NOT_CONFIGURED')
   const timeout = AbortSignal.timeout(15000)
   const response = await fetch(`${apiBaseUrl}${path}`, {

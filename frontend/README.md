@@ -14,7 +14,7 @@ npm run dev
 
 Open `http://localhost:5173`. Copy `.env.example` to `.env.local` and restart Vite after changing configuration. `VITE_MOCK_MODE=true` (default) displays synthetic records. Demo publications and correction proposals last only while navigating the staff workspace.
 
-For an **authorized** integration session, set `VITE_MOCK_MODE=false`, `VITE_API_BASE_URL=http://localhost:3000`, and `VITE_INSTITUTION_PUBLIC_KEY` to the **independently supplied SPKI PEM public key** (literal `\n` separators are accepted). Set backend `FRONTEND_ORIGIN=http://localhost:5173`. Use seeded credentials directly in the login form; on refresh, sign in again. All `VITE_` variables are public: never set a private key, password or token there.
+For an **authorized** integration session, set `VITE_MOCK_MODE=false`, `VITE_API_URL=http://localhost:3000`, and `VITE_INSTITUTION_PUBLIC_KEY` to the **independently supplied SPKI PEM public key** (literal `\n` separators are accepted). Set backend `FRONTEND_ORIGIN=http://localhost:5173`. Use seeded credentials directly in the login form; on refresh, sign in again. All `VITE_` variables are public: never set a private key, password or token there.
 
 The live marksheet renders only after the browser independently checks the receipt and evidence. Corrections use downloaded proposal JSON, the institution's offline signer (`node scripts/sign-proposal.js proposal.json own-private.pem` in the backend checkout), and detached signatures pasted under each approver's account. Private keys stay with the signer.
 
