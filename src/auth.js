@@ -10,12 +10,16 @@ export function checkPassword(password, hash) {
 export function tokenFor(user, secret) { return jwt.sign({}, secret, { subject: user.id, issuer: 'verimark', audience: 'verimark-api', expiresIn: '1h', algorithm: 'HS256' }); }
 export function auth(db, secret, roles) {
   return async (req, res, next) => {
+    let claims;
     try {
       const token = req.headers.authorization?.match(/^Bearer (.+)$/)?.[1];
-      const claims = jwt.verify(token, secret, { algorithms: ['HS256'], issuer: 'verimark', audience: 'verimark-api' });
+      claims = jwt.verify(token, secret, { algorithms: ['HS256'], issuer: 'verimark', audience: 'verimark-api' });
+      if (typeof claims.sub !== 'string') throw new Error('Missing subject');
+    } catch { return res.status(401).json({ error: 'UNAUTHORIZED' }); }
+    try {
       const user = await db.user.findUnique({ where: { id: claims.sub }, include: { student: true } });
       if (!user || !roles.includes(user.role)) return res.status(403).json({ error: 'FORBIDDEN' });
       req.user = user; next();
-    } catch { res.status(401).json({ error: 'UNAUTHORIZED' }); }
+    } catch (error) { next(error); }
   };
 }

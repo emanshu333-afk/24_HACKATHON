@@ -39,6 +39,7 @@ Roles: ADMIN, STUDENT, APPROVER, AUDITOR. “Readers” = all four, with student
 | POST /corrections/:id/approvals | APPROVER | `{signature:"86-character base64url signature"}` | 200 first: `{proposalId,approvalCount:1,applied:false}`; second: Publication + `{proposalId,approvalCount:2,applied:true}` | 400 INVALID_APPROVAL; 403 UNREGISTERED_APPROVER; 409 DUPLICATE_APPROVER/ALREADY_APPLIED/STALE_BASE_VERSION/PROPOSAL_TAMPERED/RESULT_INTEGRITY_FAILURE/LEDGER_INTEGRITY_FAILURE/PROPOSED_EVENT_INVALID |
 | GET /checkpoints/latest | Public | None | 200 signed checkpoint envelope | 404 NO_CHECKPOINT |
 | POST /audits | ADMIN or AUDITOR | Empty JSON or no body | 200 `{status:"VALID"\|"INVALID",findings:[],freshness,checkpointSequence}` | 401/403 |
+| GET /ledger/events | Staff | `?after=&limit=` (bounded) | 200 `{events:[{body,hash,signature}],nextAfter:number|null}` | 400 invalid limit; 401/403 |
 
 ## Frontend flows and example JSON
 

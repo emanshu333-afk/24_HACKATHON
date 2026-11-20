@@ -1,21 +1,21 @@
 import { createHash, sign, verify, createPublicKey } from 'node:crypto';
+import { canonical, protocolBytes } from '../shared/canonical.js';
+export { canonical, compareDisplayedResult } from '../shared/canonical.js';
 
 export const ZERO = '0'.repeat(64);
 export const FORMAT = 'verimark-v1';
-export function canonical(value) {
-  if (value === null || typeof value === 'boolean' || typeof value === 'string') return JSON.stringify(value);
-  if (typeof value === 'number' && Number.isSafeInteger(value) && !Object.is(value, -0)) return String(value);
-  if (Array.isArray(value)) return '[' + value.map(canonical).join(',') + ']';
-  if (value && Object.getPrototypeOf(value) === Object.prototype) return '{' + Object.keys(value).sort().map(k => JSON.stringify(k) + ':' + canonical(value[k])).join(',') + '}';
-  throw new Error('Unsupported canonical value: use JSON with safe integers');
-}
-export const bytes = (domain, value) => Buffer.from(`VERIMARK/v1/${domain}\0${canonical(value)}`, 'utf8');
+export const bytes = protocolBytes;
 export const digest = (domain, value) => createHash('sha256').update(bytes(domain, value)).digest('hex');
-export const keyId = key => createHash('sha256').update(createPublicKey(key).export({ type: 'spki', format: 'der' })).digest('hex');
+export const keyId = key => {
+  const publicKey = createPublicKey(key);
+  if (publicKey.asymmetricKeyType !== 'ed25519') throw new Error('Ed25519 key required');
+  return createHash('sha256').update(publicKey.export({ type: 'spki', format: 'der' })).digest('hex');
+};
 export const signValue = (domain, value, key) => sign(null, bytes(domain, value), key).toString('base64url');
 export function verifyValue(domain, value, signature, key) {
   try {
     if (!/^[A-Za-z0-9_-]{86}$/.test(signature)) return false;
+    if (createPublicKey(key).asymmetricKeyType !== 'ed25519') return false;
     return verify(null, bytes(domain, value), key, Buffer.from(signature, 'base64url'));
   } catch { return false; }
 }
@@ -73,10 +73,12 @@ export function verifyEvidence(evidence, institutionKey, { witness, receipt } = 
       previous = event.hash;
     }
     if (previous !== cp.body.headHash) fail('CHECKPOINT_HEAD_MISMATCH');
+    let witnessed = false;
     if (witness) {
       if (!verifyValue('checkpoint', witness.body, witness.signature, institutionKey) || witness.body.signer !== signer || witness.body.format !== FORMAT) fail('INVALID_WITNESS');
       else if (witness.body.sequence > cp.body.sequence) fail('ROLLBACK_BELOW_WITNESS');
       else if (evidence.events[witness.body.sequence - 1]?.hash !== witness.body.headHash) fail('WITNESS_FORK');
+      else witnessed = true;
     }
     let target;
     if (receipt) {
@@ -88,7 +90,7 @@ export function verifyEvidence(evidence, institutionKey, { witness, receipt } = 
     return {
       status: failures.length ? 'INVALID' : target && latest.get(target.body.resultId).hash !== target.hash ? 'VALID_HISTORICAL' : 'VALID_CURRENT',
       failures, checkpointSequence: cp.body.sequence,
-      freshness: witness ? 'AT_LEAST_WITNESSED_CHECKPOINT' : 'UNWITNESSED',
+      freshness: witnessed && !failures.length ? 'AT_LEAST_WITNESSED_CHECKPOINT' : 'UNWITNESSED',
       currentAsOf: cp.body.issuedAt,
       ...(target ? { result: target.body.data, latestVersion: latest.get(target.body.resultId).body.version } : {})
     };

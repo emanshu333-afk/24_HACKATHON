@@ -63,7 +63,9 @@ export class LedgerService {
       const p = await tx.correctionProposal.findUnique({ where: { id }, include: { approvals: true } });
       if (!p) throw new Problem('PROPOSAL_NOT_FOUND', 404);
       if (p.applied) throw new Problem('ALREADY_APPLIED');
-      if (p.digest !== digest('proposal', p.body) || p.body.id !== p.id || p.body.resultId !== p.resultId || p.body.baseVersion !== p.baseVersion) throw new Problem('PROPOSAL_TAMPERED');
+      try {
+        if (!p.body || p.digest !== digest('proposal', p.body) || p.body.id !== p.id || p.body.resultId !== p.resultId || p.body.baseVersion !== p.baseVersion) throw new Error();
+      } catch { throw new Problem('PROPOSAL_TAMPERED'); }
       const result = await tx.result.findUnique({ where: { id: p.resultId } });
       if (result.currentVersion !== p.baseVersion) throw new Problem('STALE_BASE_VERSION');
       const user = await tx.user.findUnique({ where: { id: userId } });
@@ -75,7 +77,7 @@ export class LedgerService {
       const approvals = [...p.approvals, { userId, signature }].map(a => ({ certificate: this.keys.registry[a.userId], signature: a.signature }));
       if (approvals.length < 2) return { proposalId: id, approvalCount: approvals.length, applied: false };
       const correction = { proposal: p.body, approvals };
-      checkApprovals(correction, this.keys.publicKey);
+      try { checkApprovals(correction, this.keys.publicKey); } catch (error) { throw new Problem(['DUPLICATE_APPROVER', 'TWO_APPROVALS_REQUIRED'].includes(error.message) ? error.message : 'INVALID_APPROVAL', 409); }
       const prior = await tx.resultVersion.findUnique({ where: { resultId_version: { resultId: result.id, version: p.baseVersion } } });
       if (!prior || prior.commitment !== digest('result', prior.data)) throw new Problem('RESULT_INTEGRITY_FAILURE');
       const data = { ...prior.data, version: p.baseVersion + 1, marks: normalizedMarks(p.body.marks) };
@@ -106,12 +108,16 @@ export class LedgerService {
       const verification = verifyEvidence(evidence, this.keys.publicKey, { witness: this.witness });
       const findings = [...verification.failures];
       const safeDigest = (domain, value) => { try { return digest(domain, value); } catch { return null; } };
+      const same = (a, b) => { try { return canonical(a) === canonical(b); } catch { return false; } };
       const events = await tx.ledgerEvent.findMany({ include: { version: true }, orderBy: { sequence: 'asc' } });
       const latest = new Map();
       const compare = (expected, actual, path, detail) => {
         try { if (canonical(expected) === canonical(actual)) return; } catch { /* Noncanonical DB data is a mismatch, not a server error. */ }
-        if (expected && actual && typeof expected === 'object' && typeof actual === 'object') {
-          for (const k of new Set([...Object.keys(expected), ...Object.keys(actual)])) compare(expected[k] ?? null, actual[k] ?? null, `${path}.${k}`, detail);
+        if (expected && actual && typeof expected === 'object' && typeof actual === 'object' && Array.isArray(expected) === Array.isArray(actual)) {
+          for (const k of new Set([...Object.keys(expected), ...Object.keys(actual)])) {
+            if (!Object.hasOwn(expected, k) || !Object.hasOwn(actual, k)) findings.push({ code: 'DATABASE_FIELD_MISMATCH', ...detail, field: `${path}.${k}`, expected: expected[k] ?? null, actual: actual[k] ?? null, expectedPresent: Object.hasOwn(expected, k), actualPresent: Object.hasOwn(actual, k) });
+            else compare(expected[k], actual[k], `${path}.${k}`, detail);
+          }
         } else findings.push({ code: 'DATABASE_FIELD_MISMATCH', ...detail, field: path, expected, actual });
       };
       for (const e of events) {
@@ -139,14 +145,19 @@ export class LedgerService {
       for (const cp of await tx.checkpoint.findMany()) {
         if (!cp.body || cp.sequence !== cp.body.sequence || !verifyValue('checkpoint', cp.body, cp.signature, this.keys.publicKey) || evidence.events[cp.sequence - 1]?.hash !== cp.body.headHash) findings.push({ code: 'STORED_CHECKPOINT_MISMATCH', sequence: cp.sequence });
       }
-      for (const p of await tx.correctionProposal.findMany({ include: { approvals: true } })) {
+      const proposals = await tx.correctionProposal.findMany({ include: { approvals: true } });
+      for (const event of evidence.events) {
+        const id = event.body?.correction?.proposal?.id;
+        if (id && !proposals.some(p => p.id === id)) findings.push({ code: 'MISSING_CORRECTION_RECORD', proposalId: id, eventId: event.body.id, resultId: event.body.resultId });
+      }
+      for (const p of proposals) {
         if (!p.body || safeDigest('proposal', p.body) !== p.digest || p.body.id !== p.id || p.body.resultId !== p.resultId || p.body.baseVersion !== p.baseVersion) findings.push({ code: 'PROPOSAL_TAMPERED', proposalId: p.id });
         for (const a of p.approvals) {
           const cert = this.keys.registry[a.userId];
           if (!cert || !verifyValue('approval', { proposalDigest: p.digest }, a.signature, cert.body.publicKey)) findings.push({ code: 'INVALID_STORED_APPROVAL', proposalId: p.id, userId: a.userId });
         }
         const appliedEvent = evidence.events.find(e => e.body?.correction?.proposal?.id === p.id);
-        if (p.applied !== Boolean(appliedEvent) || (appliedEvent && (canonical(appliedEvent.body.correction.proposal) !== canonical(p.body) || p.approvals.length !== 2))) findings.push({ code: 'CORRECTION_STATE_MISMATCH', proposalId: p.id });
+        if (p.applied !== Boolean(appliedEvent) || (appliedEvent && (!same(appliedEvent.body.correction.proposal, p.body) || p.approvals.length !== 2))) findings.push({ code: 'CORRECTION_STATE_MISMATCH', proposalId: p.id });
       }
       return { status: findings.length ? 'INVALID' : 'VALID', findings, freshness: verification.freshness, checkpointSequence: verification.checkpointSequence };
     }, { isolationLevel: 'RepeatableRead', timeout: 30000 });

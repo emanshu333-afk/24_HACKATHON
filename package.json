@@ -15,7 +15,9 @@
     "test": "node --env-file=.env --test --test-concurrency=1 test/*.test.js",
     "test:crypto": "node --test test/crypto.test.js",
     "attack:demo": "node --env-file=.env scripts/attack-demo.js",
-    "demo": "node --env-file=.env scripts/demo.js"
+    "demo": "node --env-file=.env scripts/judge-demo.js",
+    "demo:existing": "node --env-file=.env scripts/demo.js",
+    "typecheck": "tsc --noEmit --strict --lib ES2022,DOM docs/frontend-contract/api.types.ts"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
@@ -31,6 +33,7 @@
   "devDependencies": {
     "jsqr": "^1.4.0",
     "pngjs": "^7.0.0",
-    "prisma": "6.19.3"
+    "prisma": "6.19.3",
+    "typescript": "^7.0.2"
   }
 }

@@ -1,5 +1,15 @@
 # Progress
 
+## Current audit session (supersedes milestone status below)
+- Baseline independently rerun: 31/31 pass at 7e9b945. Remote query found neither backend/h8-core nor frontend advertised at origin; no push performed.
+- Reproduced three previously undetected SQL audit defects: array/object type substitution, injected null property, deletion of applied proposal/approval rows. All three now have passing regression tests.
+- Hardened malformed proposals, safe error mapping, DB-unavailable 503s, runtime configuration, signed registry loading and witness freshness labels. Original verimark-v1 byte encoding preserved for valid JSON.
+- Added shared browser WebCrypto verifier/canonical encoding, independent public signed fixtures and TypeScript API interfaces. Browser-compatible module tested through Node WebCrypto, not yet in an actual browser UI.
+- Added staff-only paginated GET /ledger/events. No registration, refresh, proposal rejection or HTTP tamper endpoint.
+- Demo/attack scripts now run six complete real HTTP/SQL journeys in a disposable schema using ephemeral keys; they never mutate existing development publications.
+- Clean npm ci + Prisma generate succeeded. Expanded suite: 104 passed, 0 failed, 0 skipped (73 additional tests); typecheck passed. Intentional DB-trigger failure emits only sanitized error class.
+- External independent witness still unconfigured. Current focus: final operations checks, complete frontend packet/structure/audit reports, then local milestone commits. No push authorization.
+
 ## Phase 0
 - Cloned SSH origin git@github.com:emanshu333-afk/24_HACKATHON.git; default main; initial README only.
 - Active branch backend/h8-core; no push authorized.
@@ -41,4 +51,15 @@ Final documentation commit follows; use `git log -3 --oneline` for its exact ID.
 - Branch backend/h8-core; all commits local, no push authorized. No known failing automated tests.
 - Staged source/config secret scan passed across 30 tracked files (actual local credentials/private-key headers checked without printing secrets); .env and .local remain ignored.
 
-Highest priority after final checks: deliver stable API contract to frontend and wire independently pinned verification into its result screen.
+## Audit session — completed
+- Baseline rerun: 31/31 pass at 7e9b945.
+- Reproduced and fixed 3 SQL audit blind spots: array/object substitution, injected null property, deleted correction/approval records. Regression tests pass.
+- Hardened malformed proposals, registry validation at startup, witness freshness labels, runtime config validation, sanitized DB-unavailable errors.
+- Added shared browser WebCrypto verifier (`shared/browser-verifier.js`) and canonical module (`shared/canonical.js`), tested to agree with Node crypto on signed fixtures.
+- Added paginated staff ledger endpoint `GET /ledger/events`.
+- Added TypeScript frontend contract `docs/frontend-contract/api.types.ts`; strict typecheck passed.
+- Added complete documentation: BACKEND_STRUCTURE.md, SYSTEM_ARCHITECTURE_FOR_FRONTEND.md, FRONTEND_INTEGRATION_PACKET.md, TEST_REPORT.md, SECURITY_AUDIT_REPORT.md, DEMO_RUNBOOK.md.
+- Final full suite: 104 passed, 0 failed, 0 skipped (73 new tests); demo and attack demo pass on disposable schema; npm audit 0; prisma validate/migrate status OK.
+- No independent external witness configured (documented limitation).
+
+Highest priority: frontend integration coordination using docs/API.md + docs/FRONTEND_INTEGRATION_PACKET.md; optionally configure a real external checkpoint channel with permission. Then local milestone commits. No push authorization.

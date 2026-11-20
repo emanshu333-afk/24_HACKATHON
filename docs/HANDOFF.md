@@ -1,16 +1,39 @@
 # Operational handoff
 
-Current objective: build the backend with real cryptographic proofs and PostgreSQL tests.
-Core implementation is tested; current objective is frontend-independent verification integration and external witness configuration, not rewriting the backend.
-Read AGENTS.md. Branch backend/h8-core; never push without approval.
-Environment: Windows, PostgreSQL binaries C:/Program Files/PostgreSQL/18/bin, Node 24.
-Existing PostgreSQL service requires credentials; use a separately initialized .local cluster on 55432.
-Implemented: full backend publication/correction/QR/audit flow, offline verifier, seed/migration, auth/RBAC, witness export. Final npm test: 31 passed, 0 failed; QR pixels decoded; actual SQL attack demo pinpointed 75→99. npm audit: 0 vulnerabilities with tested transitive overrides. Details in SECURITY_TESTS.md.
-Recent files: src/app.js, src/service.js, scripts/*, test/integration.test.js, docs/API.md, README.md and architecture/proof/security docs.
-Decisions: full-chain genesis proof, exact domain-separated protocol, global transaction lock, externally pinned trust root and approver certificates. No hidden self-trust in DB flags. Do not change proof format or routes without explicit version coordination.
-API smoke test, migration status, offline CLI and checkpoint export passed. PostgreSQL still runs; API stopped intentionally after demo. Start with npm start, then npm run demo in another terminal. Demo artifacts: .local/demo-marksheet.html, demo-evidence.json, demo-receipt.json, checkpoint-session-export.json. No independent external witness configured.
-Exact next task: coordinate with frontend on docs/API.md + docs/openapi.json, implement browser-side verification using an independently pinned institution key and shared canonical test vectors; do not alter teammate branch without direction. Then configure/test a genuinely independently controlled checkpoint channel with user permission. Existing local keys/credentials stay ignored. Do not reinitialize cluster or rotate keys silently.
-Run: npm run dev:setup (if DB stopped), npm run db:generate, npm run db:migrate, npm run db:seed, npm test, npm start. Credentials .local/demo-credentials.json; never print or commit them.
-Known failures: none in automated suite. Limitations: no browser verifier, remote witness, production custody/TLS or physical QR test. User action later: choose independently controlled checkpoint channel and reachable API deployment; permission required before any Git push.
+## Current state
+Full backend suite: 104 passed, 0 failed, 0 skipped (31 baseline + 73 new). Three real SQL audit blind spots reproduced then fixed. Shared browser WebCrypto verifier and TypeScript frontend contract added. Safe disposable six-journey demo works. `npm audit`: 0 vulnerabilities. Prisma validate/migrate status OK.
 
-Local implementation commits: e1ea24b (foundation), f070c83 (HTTP/security integration). Final docs commit is at/after these; inspect git log. Source secret check passed; no secrets committed. All repository work remains local on backend/h8-core.
+Branch: `backend/h8-core`. All work local; no push authorized. Frontend branch `frontend` untouched.
+
+## Read first
+AGENTS.md, docs/PROGRESS.md, then this file. Do not infer completion from code existence; trust test results.
+
+## Environment
+Windows, PostgreSQL 18 binaries at C:/Program Files/PostgreSQL/18/bin, Node 24. Isolated cluster on 127.0.0.1:55432 (not the existing system service). `.env` and `.local/` are Git-ignored and contain dev keys/credentials.
+
+## Commands
+`npm run dev:setup` (if DB stopped), `npm run db:generate`, `npm run db:migrate`, `npm run db:seed`, `npm test`, `npm start`.
+Demo: `npm run demo -- --export-fixtures` (disposable schema, never mutates dev data).
+Credentials: `.local/demo-credentials.json` — never print or commit.
+
+## Files recently changed
+docs/BACKEND_STRUCTURE.md, SYSTEM_ARCHITECTURE_FOR_FRONTEND.md, FRONTEND_INTEGRATION_PACKET.md, TEST_REPORT.md, SECURITY_AUDIT_REPORT.md, DEMO_RUNBOOK.md, PROGRESS.md, HANDOFF.md, shared/canonical.js, shared/browser-verifier.js, docs/frontend-contract/api.types.ts, src/service.js, src/crypto.js, src/auth.js, src/app.js, src/config.js, src/server.js, src/validation.js, scripts/lib/disposable.js, scripts/lib/judge-workflow.js, scripts/judge-demo.js, scripts/check-witness.js, scripts/attack-demo.js, test/security.test.js, test/audit-regressions.test.js, test/browser-verifier.test.js, docs/API.md, docs/openapi.json.
+
+## Decisions not to reverse without justification
+- Full-chain genesis proof; exact domain-separated verimark-v1 bytes.
+- Global transaction advisory lock for all writes.
+- Externally pinned institution trust root; approver certificates outside DB.
+- No hidden self-trust in DB validity flags.
+- Do not change proof format or routes without explicit version coordination.
+
+## Exact next step
+Commit remaining docs and code on backend/h8-core. Then coordinate frontend integration using docs/API.md + docs/FRONTEND_INTEGRATION_PACKET.md. Optionally configure a real external checkpoint channel with permission. Do not push without approval.
+
+## Known failures
+None in automated suite.
+
+## Limitations
+No browser UI test harness, no remote witness, no production custody/TLS, no physical QR test. User action later: choose independently controlled checkpoint channel and reachable API deployment; permission required before any Git push.
+
+## Commits
+e1ea24b foundation, f070c83 HTTP/security integration, 7e9b945 documentation. Working tree has uncommitted audit work; commit before handoff.

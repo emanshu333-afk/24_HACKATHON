@@ -45,6 +45,11 @@ for (const [label, mutate] of [
   assert.equal(verifyEvidence(f.evidence, institution.publicKey, { receipt: f.receipt }).status, 'INVALID');
 });
 test('missing evidence is incomplete', () => assert.equal(verifyEvidence({}, institution.publicKey).status, 'INCOMPLETE'));
+test('authentic but incompatible witness head is rejected as a fork',()=>{
+  const {evidence}=fixture();
+  const witness=signed('checkpoint',{...evidence.checkpoint.body,headHash:ZERO},institution.privateKey);
+  assert.ok(verifyEvidence(evidence,institution.publicKey,{witness}).failures.some(f=>f.code==='WITNESS_FORK'));
+});
 test('approvals require two identities and two distinct keys bound to exact proposal', () => {
   const proposal = { format: FORMAT, id: 'p1', resultId: 'r1', baseVersion: 1, marks: [], reason: 'Clerical error' };
   const approve = (userId, k) => ({ certificate: signed('approver-certificate', { format: FORMAT, role: 'APPROVER', userId, keyId: keyId(k.publicKey), publicKey: k.publicKey }, institution.privateKey), signature: signValue('approval', { proposalDigest: digest('proposal', proposal) }, k.privateKey) });

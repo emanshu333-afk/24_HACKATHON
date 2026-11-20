@@ -1,7 +1,7 @@
 import express from 'express';
 import QRCode from 'qrcode';
 import { ZodError, z } from 'zod';
-import { auth, checkPassword, tokenFor } from './auth.js';
+import { auth, checkPassword, tokenFor, hashPassword } from './auth.js';
 import { loginSchema, approvalSchema } from './validation.js';
 import { Problem } from './service.js';
 import { verifyValue } from './crypto.js';
@@ -34,6 +34,7 @@ export function createApp(db, service, { jwtSecret, publicBaseUrl = 'http://loca
     return result;
   }
   const attempts = new Map();
+  const dummyPasswordHash = hashPassword('not-an-account-password');
   app.get('/health', async (req, res) => { await db.$queryRaw`SELECT 1`; res.json({ status: 'ok' }); });
   app.post('/auth/login', async (req, res) => {
     const now = Date.now();
@@ -43,7 +44,8 @@ export function createApp(db, service, { jwtSecret, publicBaseUrl = 'http://loca
     attempts.set(req.ip, attempt);
     const input = loginSchema.parse(req.body);
     const user = await db.user.findUnique({ where: { email: input.email } });
-    if (!user || !checkPassword(input.password, user.passwordHash)) throw new Problem('INVALID_CREDENTIALS', 401);
+    const passwordMatches = checkPassword(input.password, user?.passwordHash || dummyPasswordHash);
+    if (!user || !passwordMatches) throw new Problem('INVALID_CREDENTIALS', 401);
     res.json({ token: tokenFor(user, jwtSecret), expiresIn: 3600, user: { id: user.id, role: user.role, email: user.email } });
   });
   app.get('/me', readers, (req, res) => res.json({ id: req.user.id, email: req.user.email, role: req.user.role, studentId: req.user.student?.id ?? null }));
@@ -93,12 +95,18 @@ export function createApp(db, service, { jwtSecret, publicBaseUrl = 'http://loca
     res.json({ body: cp.body, signature: cp.signature });
   });
   app.post('/audits', access('ADMIN', 'AUDITOR'), async (req, res) => res.json(await service.audit()));
+  app.get('/ledger/events', staff, async (req, res) => {
+    const query = z.object({ after: z.coerce.number().int().min(0).default(0), limit: z.coerce.number().int().min(1).max(100).default(25) }).strict().parse(req.query);
+    const rows = await db.ledgerEvent.findMany({ where: { sequence: { gt: query.after } }, orderBy: { sequence: 'asc' }, take: query.limit });
+    res.json({ events: rows.map(({ body, hash, signature }) => ({ body, hash, signature })), nextAfter: rows.length === query.limit ? rows.at(-1).sequence : null });
+  });
   app.use((req, res) => res.status(404).json({ error: 'NOT_FOUND' }));
   app.use((error, req, res, next) => {
     if (error instanceof ZodError) return res.status(400).json({ error: 'VALIDATION_FAILED', issues: error.issues.map(i => ({ path: i.path, message: i.message })) });
     if (error instanceof Problem) return res.status(error.status).json({ error: error.message });
     if (error.code === 'P2003') return res.status(400).json({ error: 'UNKNOWN_REFERENCE' });
     if (error.code === 'P2002') return res.status(409).json({ error: 'CONFLICT' });
+    if (['P1001', 'P1002', 'P1017', 'P2024'].includes(error.code) || error.constructor.name === 'PrismaClientInitializationError') return res.status(503).json({ error: 'DATABASE_UNAVAILABLE' });
     if (error.type === 'entity.too.large') return res.status(413).json({ error: 'BODY_TOO_LARGE' });
     if (error.type === 'entity.parse.failed') return res.status(400).json({ error: 'INVALID_JSON' });
     // Do not log request bodies, bearer tokens, database URLs or Prisma errors containing queries.
