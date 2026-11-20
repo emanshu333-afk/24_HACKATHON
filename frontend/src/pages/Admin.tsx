@@ -1,5 +1,5 @@
 import { Activity, ArrowRight, BookOpen, ClipboardCheck, FileClock, FileText, Fingerprint, GraduationCap, LayoutDashboard, ListChecks, Plus, ShieldAlert, Upload, Users } from 'lucide-react'
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Brand, Chip, DataTable, Heading, Notice, Panel } from '../components/ui'
 import { mockMode } from '../services/api'
 import { exams, students } from '../services/demo'
@@ -14,8 +14,15 @@ const nav = [
 
 export function AdminLayout() {
   const role = useSession().signedIn?.user.role
+  const { pathname } = useLocation()
   const visible = nav.filter(([path]) => mockMode || (path === 'publish' ? role === 'ADMIN' : !['audit', 'integrity'].includes(path) || role === 'ADMIN' || role === 'AUDITOR'))
-  return <div className="workspace"><aside className="sidebar no-print"><Brand /><p>STAFF WORKSPACE</p><nav aria-label="Workspace navigation">{visible.map(([path, label, Icon]) => <NavLink key={label} to={path ? `/admin/${path}` : '/admin'} end={!path}><Icon size={17} />{label}</NavLink>)}</nav><Link className="sidebar-bottom" to="/verify">Public verification <ArrowRight size={15} /></Link></aside><main id="main" className="workspace-main"><div className="workspace-top no-print"><span><Activity size={17} /> Examination integrity</span>{!mockMode && role ? <div className="actions"><Chip>{role}</Chip><SignOut /></div> : <Chip tone={mockMode ? 'amber' : 'neutral'}>{mockMode ? 'Demo workspace' : 'Signed out'}</Chip>}</div><div className="workspace-body">{mockMode ? <DemoWorkspace><Outlet /></DemoWorkspace> : <RequireAccount roles={['ADMIN', 'APPROVER', 'AUDITOR']}><Outlet /></RequireAccount>}</div></main></div>
+  const current = visible.find(([path]) => path ? pathname.split('/')[2] === path : pathname === '/admin')?.[1] ?? 'Staff workspace'
+  const links = visible.map(([path, label, Icon]) => <NavLink key={label} to={path ? `/admin/${path}` : '/admin'} end={!path}><Icon size={17} />{label}</NavLink>)
+  return <div className="workspace"><aside className="sidebar no-print"><Brand /><p>STAFF WORKSPACE</p>
+    <nav className="desktop-workspace-nav" aria-label="Workspace navigation">{links}</nav>
+    <details className="mobile-workspace-nav" key={pathname}><summary>Workspace menu <span>· {current}</span></summary><nav aria-label="Workspace navigation">{links}<Link to="/verify">Public verification <ArrowRight size={15} /></Link></nav></details>
+    <Link className="sidebar-bottom" to="/verify">Public verification <ArrowRight size={15} /></Link></aside>
+    <main id="main" tabIndex={-1} className="workspace-main"><div className="workspace-top no-print"><span><Activity size={17} /> Examination integrity</span>{!mockMode && role ? <div className="actions"><Chip>{role}</Chip><SignOut /></div> : <Chip tone={mockMode ? 'amber' : 'neutral'}>{mockMode ? 'Demo workspace' : 'Signed out'}</Chip>}</div><div className="workspace-body">{mockMode ? <DemoWorkspace><Outlet /></DemoWorkspace> : <RequireAccount roles={['ADMIN', 'APPROVER', 'AUDITOR']}><Outlet /></RequireAccount>}</div></main></div>
 }
 
 export function Overview() {

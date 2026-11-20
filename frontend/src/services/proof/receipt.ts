@@ -27,12 +27,20 @@ export function receiptLink(receipt: ResultReceipt) {
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
   return `/verify?receipt=${token}`
 }
-const labels = ['Result commitment', 'Digital signature', 'Ledger evidence', 'Trusted checkpoint', 'Version status']
+const labels = ['Evidence received', 'Evidence format', 'Trusted institution key', 'Digital signature', 'Result commitment', 'Publication history', 'Signed checkpoint', 'Final outcome']
 export function unavailable(reason: string): Verification {
   return { status: 'unavailable', reason, checks: labels.map(label => ({ label, state: 'unavailable', detail: 'Not established' })) }
 }
 function invalid(reason: string, failures: string[]): Verification {
-  return { ...unavailable(reason), status: 'invalid', failures }
+  const failedStages = new Set<string>(['Final outcome'])
+  for (const failure of failures) {
+    if (['FORGED_RECEIPT', 'INVALID_EVENT_SIGNATURE', 'INVALID_APPROVAL'].includes(failure)) failedStages.add('Digital signature')
+    if (['RESULT_COMMITMENT_MISMATCH', 'DISPLAYED_RESULT_MISMATCH'].includes(failure)) failedStages.add('Result commitment')
+    if (['INCOMPLETE_CHAIN', 'BROKEN_LINK', 'EVENT_HASH_MISMATCH', 'RECEIPT_EVENT_MISSING'].includes(failure)) failedStages.add('Publication history')
+    if (['INVALID_CHECKPOINT_SIGNATURE', 'CHECKPOINT_HEAD_MISMATCH'].includes(failure)) failedStages.add('Signed checkpoint')
+    if (failure === 'MALFORMED_EVIDENCE') failedStages.add('Evidence format')
+  }
+  return { status: 'invalid', reason, failures, checks: labels.map(label => failedStages.has(label) ? { label, state: 'failed', detail: 'See the verification findings above' } : { label, state: 'unavailable', detail: 'No independent pass shown for this outcome' }) }
 }
 
 export async function evaluateEvidence(response: VerificationResponse, receipt: ResultReceipt, key: string): Promise<Verification> {
@@ -48,11 +56,12 @@ export async function evaluateEvidence(response: VerificationResponse, receipt: 
   if (response.verification.status !== verified.status || !Array.isArray(response.verification.failures) || response.verification.failures.length) {
     return unavailable('The service and browser did not agree on the verification outcome. No authenticity decision is shown.')
   }
-  const checks: ProofCheck[] = labels.map((label, i) => ({ label, state: 'passed', detail: ['SHA-256 matches the result', 'Ed25519 signatures checked in this browser', 'Receipt and full hash chain match', `Signed checkpoint #${verified.checkpointSequence}`, `Latest signed version: ${verified.latestVersion}`][i] }))
+  const checks: ProofCheck[] = labels.map((label, i) => ({ label, state: 'passed', detail: ['Receipt and ledger evidence available', 'Supported VeriMark v1 receipt and result', 'Checked with the independently configured key', 'Ed25519 signatures checked in this browser', 'SHA-256 matches the result', 'Receipt and full hash chain match', `Signed checkpoint #${verified.checkpointSequence}`, `Latest signed version: ${verified.latestVersion}`][i] }))
   return {
     status: comparison.status === 'VALID_HISTORICAL' ? 'historical' : 'current',
     reason: 'Verified against the offered signed checkpoint. No independent freshness witness is configured.',
     version: displayed.data.version, resultId: displayed.data.resultId, checkedAt: verified.currentAsOf, checks,
+    evidence: { checkpointSequence: verified.checkpointSequence, keyFingerprint: receipt.body.signer, commitment: receipt.body.commitment, latestVersion: verified.latestVersion, witness: 'not-configured' },
     marks: displayed.data.marks.map(mark => ({ subject: mark.subject, scored: mark.score, maximum: mark.max })),
   }
 }

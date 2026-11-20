@@ -1,8 +1,12 @@
 import { expect, test } from '@playwright/test'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { QRCodeSVG } from 'qrcode.react'
 
-test('all public and workspace routes render on desktop and narrow mobile', async ({ page }) => {
+test('all public and workspace routes render at five representative widths', async ({ page }) => {
+  test.setTimeout(90_000)
   const routes = [['/', /Every mark\s*has proof/], ['/verify', 'Verify a result'], ['/student', 'Your exam results'], ['/student/marksheet/VM-SP26-017-V1', 'Statement of Marks'], ['/admin', 'Integrity overview'], ['/admin/students', 'Students'], ['/admin/exams', 'Exams'], ['/admin/results', 'Results'], ['/admin/publish', 'Publish results'], ['/admin/history', 'Publication history'], ['/admin/ledger', 'Ledger explorer'], ['/admin/corrections', 'Correction requests'], ['/admin/integrity', 'Tamper Detection Lab'], ['/admin/audit', 'Audit reports'], ['/not-a-route', 'Page not found']] as const
-  for (const width of [1440, 360]) {
+  for (const width of [360, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 850 })
     for (const [path, name] of routes) {
       await page.goto(path)
@@ -10,6 +14,35 @@ test('all public and workspace routes render on desktop and narrow mobile', asyn
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
     }
   }
+})
+
+test('mobile workspace and confirmation can be used from the keyboard', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 760 })
+  await page.goto('/admin')
+  await page.locator('summary').filter({ hasText: 'Workspace menu' }).press('Enter')
+  const menu = page.getByRole('navigation', { name: 'Workspace navigation' })
+  await menu.getByRole('link', { name: 'Publish results' }).press('Enter')
+  await expect(page.getByRole('heading', { name: 'Publish results' })).toBeVisible()
+  await expect(menu).toBeHidden()
+  await page.getByRole('combobox', { name: /^Student/ }).selectOption('NW-24017')
+  await page.getByRole('combobox', { name: /^Exam/ }).selectOption('EX-26-SU')
+  for (const field of ['Data Structures', 'Discrete Mathematics', 'Computer Networks', 'Database Systems', 'Technical Writing']) await page.getByLabel(field).fill('80')
+  const review = page.getByRole('button', { name: 'Review sample publication' })
+  await review.press('Enter')
+  await expect(page.getByRole('button', { name: 'Cancel' })).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toBeHidden()
+  await expect(review).toBeFocused()
+  await expect(page.getByLabel('Data Structures')).toHaveValue('80')
+})
+
+test('hostile QR image is rejected without navigating', async ({ page }) => {
+  await page.setContent(renderToStaticMarkup(createElement(QRCodeSVG, { value: 'javascript:alert(1)', size: 160, marginSize: 4 })))
+  const png = await page.locator('svg').screenshot()
+  await page.goto('/verify')
+  await page.getByLabel('Read a QR image').setInputFiles({ name: 'invalid.png', mimeType: 'image/png', buffer: png })
+  await expect(page.getByRole('alert')).toHaveText(/No supported VeriMark QR/)
+  await expect(page).toHaveURL(/\/verify$/)
 })
 
 test('results search, filters and pagination report the records actually shown', async ({ page }) => {
@@ -46,6 +79,13 @@ test('publication requires valid marks and confirmation before adding to demo hi
   await dialog.getByRole('button', { name: 'Add to demo history' }).click()
   await page.getByRole('link', { name: 'View history' }).click()
   await expect(page.getByText('DEMO-EX-26-SU-NW-24017-V1')).toBeVisible()
+  await page.getByRole('link', { name: 'New publication' }).click()
+  await page.getByLabel('Student', { exact: true }).selectOption('NW-24017')
+  await page.getByLabel('Exam', { exact: true }).selectOption('EX-26-SU')
+  for (const field of ['Data Structures', 'Discrete Mathematics', 'Computer Networks', 'Database Systems', 'Technical Writing']) await page.getByLabel(field).fill('85')
+  await page.getByRole('button', { name: 'Review sample publication' }).click()
+  await expect(page.getByRole('alert')).toContainText('A result already exists')
+  await expect(page.getByRole('dialog')).toBeHidden()
 })
 
 test('correction proposals require a reason and do not manufacture approvals', async ({ page }) => {
@@ -70,6 +110,10 @@ test('tamper lab identifies the fixed field and values', async ({ page }) => {
   await expect(page.getByRole('status')).toHaveText(/marks\.dataStructures · Expected 85, found 95/)
   await page.getByRole('button', { name: 'Reset comparison' }).click()
   await expect(page.getByText('Mock finding: field mismatch')).toHaveCount(0)
+  await page.getByRole('combobox', { name: /^Sample scenario/ }).selectOption('missing')
+  await page.getByRole('button', { name: 'Compare sample records' }).click()
+  await expect(page.getByRole('status')).toContainText('Comparison unavailable')
+  await expect(page.getByText('Mock finding: field mismatch')).toHaveCount(0)
 })
 
 test('marksheet prints as one A4 page and its QR opens the exact demo reference', async ({ page }) => {
@@ -87,16 +131,16 @@ test('marksheet prints as one A4 page and its QR opens the exact demo reference'
   expect(Math.abs(Number(size?.[2]) - 841.89)).toBeLessThan(2)
   await page.emulateMedia({ media: 'screen' })
   await page.getByRole('link', { name: 'Open sample verification' }).click()
-  await expect(page.getByText('Verification unavailable')).toBeVisible()
+  await expect(page.getByText('Verification unavailable', { exact: true })).toBeVisible()
   await page.goto('/verify')
   await page.getByLabel('Read a QR image').setInputFiles({ name: 'marksheet.png', mimeType: 'image/png', buffer: png })
   await expect(page).toHaveURL(/ref=VM-SP26-017-V1/)
-  await expect(page.getByText('Verification unavailable')).toBeVisible()
+  await expect(page.getByText('Verification unavailable', { exact: true })).toBeVisible()
 })
 
 test('live mode without backend shows no mock marks or private workspace', async ({ page }) => {
   await page.goto('http://127.0.0.1:4174/verify?ref=VM-SP26-017-V1')
-  await expect(page.getByText('Verification unavailable')).toBeVisible()
+  await expect(page.getByText('Verification unavailable', { exact: true })).toBeVisible()
   await expect(page.getByText('No live verification service is configured.')).toBeVisible()
   await expect(page.getByText('Unverified example marks')).toHaveCount(0)
   await page.goto('http://127.0.0.1:4174/admin/results')

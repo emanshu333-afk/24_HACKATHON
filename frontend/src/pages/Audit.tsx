@@ -5,15 +5,61 @@ import { Chip, DataTable, Heading, Notice, Panel } from '../components/ui'
 import { demoReference } from '../services/demo'
 
 const events = [
-  { id: 'EVT-104', ref: demoReference, type: 'Integrity finding', date: '16 Jun 2026', evidence: 'Field mismatch · marks.dataStructures', checkpoint: 'No signed checkpoint' },
-  { id: 'EVT-103', ref: 'VM-SP26-023-V2', type: 'Correction', date: '15 Jun 2026', evidence: 'CR-1042 · Version 2 example', checkpoint: 'No signed checkpoint' },
-  { id: 'EVT-102', ref: demoReference, type: 'Publication', date: '12 Jun 2026', evidence: 'Version 1 · Publication example', checkpoint: 'No signed checkpoint' },
-  { id: 'EVT-101', ref: 'VM-SP26-023-V1', type: 'Publication', date: '12 Jun 2026', evidence: 'Version 1 · Superseded example', checkpoint: 'No signed checkpoint' },
+  { sequence: 104, type: 'Integrity finding', ref: demoReference, date: '16 Jun 2026', evidence: 'Field mismatch · marks.dataStructures' },
+  { sequence: 103, type: 'Correction', ref: 'VM-SP26-023-V2', date: '15 Jun 2026', evidence: 'CR-1042 · Version 2 example' },
+  { sequence: 102, type: 'Publication', ref: demoReference, date: '12 Jun 2026', evidence: 'Version 1 · Publication example' },
+  { sequence: 101, type: 'Publication', ref: 'VM-SP26-023-V1', date: '12 Jun 2026', evidence: 'Version 1 · Superseded example' },
 ]
-export function Audit({ ledger = false }: { ledger?: boolean }) { return <><Heading eyebrow="AUDITOR VIEW" title={ledger ? 'Ledger explorer' : 'Audit reports'} detail={ledger ? 'Inspect the illustrated event sequence for publications and corrections.' : 'Search integrity findings by result reference, field, or event identifier.'} /><Notice>Example events only. Signed checkpoints and live failed-verification logs are not connected.</Notice><DataTable label={ledger ? 'Ledger events' : 'Audit events'} rows={ledger ? events.filter(e => e.type !== 'Integrity finding') : events} rowKey={e => e.id} search={e => `${e.id} ${e.ref} ${e.type} ${e.evidence}`} filters={{ name: 'Event category', options: ledger ? ['Publication', 'Correction'] : ['Publication', 'Correction', 'Integrity finding'], value: e => e.type }} columns={[{ label: 'Event', display: e => <code>{e.id}</code> }, { label: 'Result reference', display: e => <code>{e.ref}</code> }, { label: 'Category', display: e => <Chip tone={e.type === 'Integrity finding' ? 'red' : 'neutral'}>{e.type}</Chip> }, { label: 'Finding / evidence', display: e => e.type === 'Integrity finding' ? <Link className="inline-link" to="/admin/integrity">{e.evidence}</Link> : e.evidence }, { label: 'Checkpoint', display: e => e.checkpoint }, { label: 'Date (UTC)', display: e => e.date }]} /></> }
 
-const scenario = { subject: 'Data Structures', published: 85, snapshot: 95, field: 'marks.dataStructures' }
+export function Audit({ ledger = false }: { ledger?: boolean }) {
+  return <>
+    <Heading eyebrow="AUDITOR VIEW" title={ledger ? 'Ledger explorer' : 'Audit reports'} detail={ledger ? 'Inspect the illustrated event sequence for publications and corrections.' : 'Search sample findings by result reference, field, or event identifier.'} />
+    <Notice>Example events only. No signatures, checkpoint, or hash relationships have been verified.</Notice>
+    <DataTable label={ledger ? 'Ledger events' : 'Audit events'} rows={ledger ? events.filter(e => e.type !== 'Integrity finding') : events} rowKey={e => String(e.sequence)} search={e => `EVT-${e.sequence} ${e.ref} ${e.type} ${e.evidence}`} filters={{ name: 'Event category', options: ledger ? ['Publication', 'Correction'] : ['Publication', 'Correction', 'Integrity finding'], value: e => e.type }} columns={[
+      { label: 'Sample event', display: e => <code>EVT-{e.sequence}</code> }, { label: 'Result reference', display: e => <code>{e.ref}</code> },
+      { label: 'Category', display: e => <Chip tone={e.type === 'Integrity finding' ? 'red' : 'neutral'}>{e.type}</Chip> },
+      { label: 'Finding / evidence', display: e => e.type === 'Integrity finding' ? <Link className="inline-link" to="/admin/integrity">{e.evidence}</Link> : e.evidence },
+      { label: 'Checkpoint', display: () => 'Not available' }, { label: 'Date (UTC)', display: e => e.date },
+    ]} />
+  </>
+}
+
+const scenarios = {
+  mark: { title: 'Changed subject mark', field: 'marks.dataStructures', published: '85', snapshot: '95', detail: 'A score changed outside the correction workflow. This comparison illustrates the discrepancy an audit should explain.' },
+  unchanged: { title: 'Unmodified sample record', field: 'marks.dataStructures', published: '85', snapshot: '85', detail: 'The compared field agrees. A matching value alone does not establish that the underlying ledger is authentic.' },
+  exam: { title: 'Changed examination reference', field: 'examId', published: 'EX-26-SP', snapshot: 'EX-26-SU', detail: 'A published result is tied to a specific exam. An unexpected exam reference changes the record even when marks are unchanged.' },
+  missing: { title: 'Missing publication evidence', field: 'checkpoint', published: null, snapshot: null, detail: 'There is no signed checkpoint to compare. Missing evidence does not establish tampering.' },
+} as const
+
 export function Integrity() {
-  const [compared, setCompared] = useState(false)
-  const mismatch = scenario.published !== scenario.snapshot
-  return <><Heading eyebrow="INTEGRITY MONITORING" title="Tamper Detection Lab" detail="Follow a sample incident from original publication to field-level investigation." /><Notice><strong>MOCK DEMO</strong> · This exercise compares two fixed fixtures. No database is changed and no live integrity audit is run.</Notice><div className="lab-grid"><Panel className="lab-compare"><div className="section-head"><span className="icon-tile"><ScanSearch size={23} /></span><div><h2>Compare the result</h2><p>{scenario.subject} · <code>{demoReference}</code></p></div></div><div className="comparison"><div><span>Published record</span><strong>{scenario.published}<small> / 100</small></strong><span>Original demo publication</span></div><ArrowRight size={22} /><div className={compared && mismatch ? 'mismatch' : ''}><span>Database snapshot</span><strong>{scenario.snapshot}<small> / 100</small></strong><span>Illustrated direct edit</span></div></div><button className="btn" onClick={() => setCompared(!compared)}><ScanSearch size={18} />{compared ? 'Reset comparison' : 'Compare sample records'}</button>{compared && <div className="finding" role="status"><ShieldAlert size={22} /><div><strong>{mismatch ? 'Mock finding: field mismatch' : 'No sample mismatch'}</strong><p><code>{scenario.field}</code> · Expected {scenario.published}, found {scenario.snapshot}.</p></div></div>}</Panel><Panel><div className="section-head"><span className="icon-tile"><Fingerprint size={22} /></span><div><h2>Evidence checklist</h2><p>Evidence needed for a live audit</p></div></div><ul className="evidence-list">{[['Result commitment', 'No digest in fixture'], ['Ledger event', 'Example EVT-102'], ['Signature verification', 'Not evaluated'], ['Checkpoint verification', 'Not evaluated']].map(([label, detail]) => <li key={label}><div><strong>{label}</strong><span>{detail}</span></div></li>)}</ul></Panel></div><div className="student-grid"><Panel><h2>Follow the audit trail</h2><ol className="timeline"><li><strong>EVT-102 · Original sample release</strong><span>85 published for Data Structures</span></li><li><strong>Illustrated out-of-band change</strong><span>Snapshot shows 95 for the same field</span></li><li><strong>EVT-104 · Sample audit event</strong><span>Field mismatch associated with {demoReference}</span></li></ol><Link className="inline-link" to="/admin/audit">Open audit reports <ArrowRight size={16} /></Link></Panel><Panel><h2>How a legitimate change differs</h2><p>An authorized correction records a reason and two distinct signatures, then publishes a new version without erasing the old one.</p><p>Separate sample <code>CR-1042</code> illustrates the transition from v1 to v2.</p><Link className="inline-link" to="/admin/corrections?id=CR-1042">See example correction history <ArrowRight size={16} /></Link></Panel></div></> }
+  const [selected, setSelected] = useState<keyof typeof scenarios>('mark'), [compared, setCompared] = useState(false)
+  const scenario = scenarios[selected]
+  const comparable = scenario.published !== null && scenario.snapshot !== null
+  const mismatch = comparable && scenario.published !== scenario.snapshot
+  return <>
+    <Heading eyebrow="INTEGRITY MONITORING" title="Tamper Detection Lab" detail="Compare synthetic records and learn what an integrity finding can and cannot tell you." />
+    <Notice><strong>MOCK DEMO</strong> · Every scenario uses fixed fixtures. No database is changed and no live audit is run.</Notice>
+    <div className="lab-grid">
+      <Panel className="lab-compare">
+        <div className="section-head"><span className="icon-tile"><ScanSearch size={23} /></span><div><h2>Compare the result</h2><p>Sample publication <code>{demoReference}</code></p></div></div>
+        <label>Sample scenario<select value={selected} onChange={e => { const value = e.target.value; if (Object.hasOwn(scenarios, value)) { setSelected(value as keyof typeof scenarios); setCompared(false) } }}>{Object.entries(scenarios).map(([id, item]) => <option key={id} value={id}>{item.title}</option>)}</select></label>
+        <div className="comparison">
+          <div><span>Published record</span><strong className="scenario-value">{scenario.published ?? 'Unavailable'}{(selected === 'mark' || selected === 'unchanged') && <small> / 100</small>}</strong><span>Original fixture</span></div>
+          <ArrowRight size={22} />
+          <div className={compared && mismatch ? 'mismatch' : ''}><span>Snapshot</span><strong className="scenario-value">{scenario.snapshot ?? 'Unavailable'}{(selected === 'mark' || selected === 'unchanged') && <small> / 100</small>}</strong><span>Comparison fixture</span></div>
+        </div>
+        <button className="btn" onClick={() => setCompared(!compared)}><ScanSearch size={18} />{compared ? 'Reset comparison' : 'Compare sample records'}</button>
+        {compared && <div className={`finding ${mismatch ? '' : 'finding-neutral'}`} role="status"><ShieldAlert size={20} /><div><strong>{!comparable ? 'Comparison unavailable' : mismatch ? 'Mock finding: field mismatch' : 'No sample mismatch'}</strong>{comparable && <p><code>{scenario.field}</code> · Expected {scenario.published}, found {scenario.snapshot}.</p>}<p>{scenario.detail}</p></div></div>}
+      </Panel>
+      <Panel>
+        <div className="section-head"><span className="icon-tile"><Fingerprint size={22} /></span><div><h2>Evidence checklist</h2><p>Checks a live audit or verifier would need</p></div></div>
+        <ul className="evidence-list">{['Result commitment', 'Ledger event authenticity', 'Digital signatures', 'Signed checkpoint'].map(label => <li key={label}><strong>{label}</strong><Chip>Not checked</Chip></li>)}</ul>
+        <Link className="inline-link" to={`/verify?ref=${demoReference}`}>Open sample evidence inspector <ArrowRight size={16} /></Link>
+      </Panel>
+    </div>
+    <div className="student-grid">
+      <Panel><h2>Follow the audit trail</h2><ol className="timeline"><li><strong>EVT-102 · Original sample release</strong><span>85 published for Data Structures</span></li><li><strong>Illustrated out-of-band change</strong><span>Snapshot shows 95 for the same field</span></li><li><strong>EVT-104 · Sample audit event</strong><span>Field mismatch associated with {demoReference}</span></li></ol><Link className="inline-link" to="/admin/audit">Open audit reports <ArrowRight size={16} /></Link></Panel>
+      <Panel><h2>How a legitimate change differs</h2><p>An authorized correction records a reason and two distinct signatures, then publishes a new version without erasing the old one.</p><p>Separate sample <code>CR-1042</code> illustrates the transition from v1 to v2.</p><Link className="inline-link" to="/admin/corrections?id=CR-1042">See example correction history <ArrowRight size={16} /></Link></Panel>
+    </div>
+  </>
+}

@@ -13,17 +13,18 @@ npm ci
 npm run dev
 ```
 
-**Exact next step:** Point `.env.local` to the teammate's test API and independently supplied institution public key, then rerun the [live smoke test](INTEGRATION_NOTES.md) on fresh seeded test data. Confirm physical QR reachability and CORS before demoing across devices. Fetch updates, examine docs with `git show origin/backend/h8-core:<path>`, and coordinate any contract drift.
+**Exact next step:** Obtain the complete institution public key out of band, set `VITE_INSTITUTION_PUBLIC_KEY` in the ignored `.env.local`, and restart Vite. The active tunnel passed browser HTTP/CORS checks; the supplied key was malformed. Follow the [manual role checklist](INTEGRATION_TEST_REPORT.md) using rotated account access in your own browser. Confirm physical QR reachability and CORS before the shared demo.
 
 ## Code map
 
 - `src/app.tsx`: routes and shared page structure. `src/styles.css`: design tokens, responsive layout and A4 print rules.
 - `src/services/http.ts`, `wire.ts`, `session.tsx`: typed HTTP, wire shapes, and memory-only JWT. `src/services/proof/`: pinned-key independent verifier. `api.ts`, `demo.ts`, `workspace.tsx`: mock data and QR input handling.
 - `src/pages/Verify.tsx` and `Student.tsx`: public result evidence, local image reader, student portal and marksheet.
+- `src/services/verification-input.ts` owns bounded reference/receipt parsing. `src/components/EvidenceInspector.tsx` owns expandable outcome details and trust explanations.
 - `src/pages/LiveAccount.tsx`, `LiveResults.tsx` and `LiveWorkflows.tsx`: real account, result history, proof-backed printing, publication, externally signed approvals, ledger and audit routes.
 - `src/test/` and `e2e/`: Vitest / Testing Library and Playwright coverage. Use the README commands.
 
-Backend docs, signed vectors, and a disposable local backend were used. No shared staging URL or production public key is configured. Keep mock mode separate and retain the fail-closed path.
+An earlier milestone used a disposable local backend. The current workstation is configured in ignored `.env.local` for the temporary HTTPS tunnel; the trusted public key is deliberately blank pending replacement. No live authenticated requests were tested on the tunnel.
 
 ## Branch integration (once both milestones are ready)
 
