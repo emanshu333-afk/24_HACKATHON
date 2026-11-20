@@ -1,0 +1,25 @@
+{
+  "name": "verimark-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node --env-file=.env src/server.js",
+    "dev:setup": "node scripts/dev-setup.js",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "node --env-file=.env scripts/seed.js",
+    "test": "node --env-file=.env --test --test-concurrency=1 test/*.test.js",
+    "test:crypto": "node --test test/crypto.test.js",
+    "attack:demo": "node --env-file=.env scripts/attack-demo.js"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "qrcode": "^1.5.4",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": { "prisma": "6.19.3" }
+}

@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+enum Role {
+  ADMIN
+  STUDENT
+  APPROVER
+  AUDITOR
+}
+model User {
+  id           String @id @default(uuid())
+  email        String @unique
+  passwordHash String
+  role         Role
+  publicKey    String?
+  student      Student?
+  approvals    Approval[]
+}
+model Student {
+  id       String @id @default(uuid())
+  code     String @unique
+  name     String
+  userId   String? @unique
+  user     User? @relation(fields: [userId], references: [id])
+  results  Result[]
+}
+model Exam {
+  id      String @id @default(uuid())
+  code    String @unique
+  title   String
+  results Result[]
+}
+model Result {
+  id             String @id @default(uuid())
+  studentId      String
+  examId         String
+  currentVersion Int
+  marks          Json
+  student        Student @relation(fields: [studentId], references: [id])
+  exam           Exam @relation(fields: [examId], references: [id])
+  versions       ResultVersion[]
+  proposals      CorrectionProposal[]
+  @@unique([studentId, examId])
+}
+model ResultVersion {
+  id         String @id @default(uuid())
+  resultId   String
+  version    Int
+  data       Json
+  commitment String
+  result     Result @relation(fields: [resultId], references: [id])
+  event      LedgerEvent?
+  @@unique([resultId, version])
+}
+model LedgerEvent {
+  id          String @id
+  sequence    Int @unique
+  versionId   String @unique
+  body        Json
+  hash        String @unique
+  signature   String
+  version     ResultVersion @relation(fields: [versionId], references: [id])
+}
+model CorrectionProposal {
+  id          String @id
+  resultId    String
+  baseVersion Int
+  body        Json
+  digest      String @unique
+  applied     Boolean @default(false)
+  result      Result @relation(fields: [resultId], references: [id])
+  approvals   Approval[]
+  @@index([resultId])
+}
+model Approval {
+  id         String @id @default(uuid())
+  proposalId String
+  userId     String
+  signature  String
+  proposal   CorrectionProposal @relation(fields: [proposalId], references: [id])
+  user       User @relation(fields: [userId], references: [id])
+  @@unique([proposalId, userId])
+}
+model Checkpoint {
+  sequence  Int @id
+  body      Json
+  signature String
+}
