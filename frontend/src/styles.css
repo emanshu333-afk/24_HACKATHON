@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+.login-panel{max-width:500px}.live-section{margin-bottom:1rem}.live-section>label,.live-section form{margin-top:1rem}.proposal-link{display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:.75rem .2rem;text-align:left;border-bottom:1px solid var(--line)}.proposal-link[aria-pressed=true]{color:var(--color-accent);font-weight:700}
+@media print{.workspace:has(.marksheet){display:block;min-height:0}.workspace:has(.marksheet) .workspace-body{padding:0;max-width:none}}
+
 @theme {
   --font-sans: 'Inter', 'Segoe UI', system-ui, sans-serif;
   --color-ink: #122728;

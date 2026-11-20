@@ -1,6 +1,6 @@
 # Frontend handoff
 
-**Objective:** Keep verification evidence-driven while connecting the frontend to the backend’s actual protocol. Application milestone: `d565311` on `frontend`.
+**Objective:** Prepare the integrated application for the shared demo. Frontend starts from demo commit `d565311` and handoff `c8c5320`; the live integration targets `origin/backend/h8-core` at `21e766c`.
 
 ## Resume
 
@@ -13,17 +13,17 @@ npm ci
 npm run dev
 ```
 
-**Exact next step:** When `origin/backend/h8-core` appears, list its documentation with `git ls-tree -r --name-only origin/backend/h8-core`. Read available files using `git show origin/backend/h8-core:<path>` without switching branches. Confirm the public evidence endpoint and protocol against a running backend and obtain proof test vectors before changing `verifyReference`.
+**Exact next step:** Point `.env.local` to the teammate's test API and independently supplied institution public key, then rerun the [live smoke test](INTEGRATION_NOTES.md) on fresh seeded test data. Confirm physical QR reachability and CORS before demoing across devices. Fetch updates, examine docs with `git show origin/backend/h8-core:<path>`, and coordinate any contract drift.
 
 ## Code map
 
 - `src/app.tsx`: routes and shared page structure. `src/styles.css`: design tokens, responsive layout and A4 print rules.
-- `src/services/api.ts`: mock/live boundary and QR URL parsing. `model.ts` holds UI types, **not** backend wire schemas. `demo.ts` and `workspace.tsx` contain synthetic records and transient staff operations.
+- `src/services/http.ts`, `wire.ts`, `session.tsx`: typed HTTP, wire shapes, and memory-only JWT. `src/services/proof/`: pinned-key independent verifier. `api.ts`, `demo.ts`, `workspace.tsx`: mock data and QR input handling.
 - `src/pages/Verify.tsx` and `Student.tsx`: public result evidence, local image reader, student portal and marksheet.
-- `src/pages/Workflows.tsx` and `Audit.tsx`: staff forms, correction views, fixture-based lab, audit and ledger screens.
+- `src/pages/LiveAccount.tsx`, `LiveResults.tsx` and `LiveWorkflows.tsx`: real account, result history, proof-backed printing, publication, externally signed approvals, ledger and audit routes.
 - `src/test/` and `e2e/`: Vitest / Testing Library and Playwright coverage. Use the README commands.
 
-Backend docs, staging URL, role/session rules, trusted keys, and real signed proof fixtures were unavailable. Follow [Integration notes](INTEGRATION_NOTES.md). Keep mock mode separate and retain the fail-closed path.
+Backend docs, signed vectors, and a disposable local backend were used. No shared staging URL or production public key is configured. Keep mock mode separate and retain the fail-closed path.
 
 ## Branch integration (once both milestones are ready)
 

@@ -6,7 +6,7 @@ export type Correction = { id: string; ref: string; subject: string; original: n
 export type ProofCheck = { label: string; state: 'passed' | 'failed' | 'unavailable'; detail: string }
 export type Verification = {
   status: 'current' | 'historical' | 'invalid' | 'unavailable'; checks: ProofCheck[];
-  reason: string; version?: number; marks?: Mark[]; exam?: string;
+  reason: string; version?: number; marks?: Mark[]; exam?: string; resultId?: string; checkedAt?: string; failures?: string[];
 }
 export const totals = (marks: Mark[]) => marks.reduce((acc, m) => ({ scored: acc.scored + m.scored, maximum: acc.maximum + m.maximum }), { scored: 0, maximum: 0 })
 export const percent = (marks: Mark[]) => { const { scored, maximum } = totals(marks); return maximum ? Math.round(1000 * scored / maximum) / 10 : 0 }

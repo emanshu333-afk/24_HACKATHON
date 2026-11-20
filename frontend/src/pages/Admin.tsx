@@ -5,13 +5,17 @@ import { mockMode } from '../services/api'
 import { exams, students } from '../services/demo'
 import { formatDate, percent } from '../services/model'
 import { DemoWorkspace, useWorkspace } from '../services/workspace'
+import { useSession } from '../services/session'
+import { RequireAccount, SignOut } from './LiveAccount'
 
 const nav = [
   ['', 'Overview', LayoutDashboard], ['students', 'Students', Users], ['exams', 'Exams', GraduationCap], ['results', 'Results', ListChecks], ['publish', 'Publish results', Upload], ['history', 'Publication history', FileClock], ['ledger', 'Ledger explorer', Fingerprint], ['corrections', 'Corrections', ClipboardCheck], ['integrity', 'Tamper Detection Lab', ShieldAlert], ['audit', 'Audit reports', FileText],
 ] as const
 
 export function AdminLayout() {
-  return <div className="workspace"><aside className="sidebar"><Brand /><p>STAFF WORKSPACE</p><nav aria-label="Workspace navigation">{nav.map(([path, label, Icon]) => <NavLink key={label} to={path ? `/admin/${path}` : '/admin'} end={!path}><Icon size={17} />{label}</NavLink>)}</nav><Link className="sidebar-bottom" to="/verify">Public verification <ArrowRight size={15} /></Link></aside><main id="main" className="workspace-main"><div className="workspace-top"><span><Activity size={17} /> Examination integrity</span><Chip tone={mockMode ? 'amber' : 'neutral'}>{mockMode ? 'Demo workspace' : 'Disconnected'}</Chip></div><div className="workspace-body">{mockMode ? <DemoWorkspace><Outlet /></DemoWorkspace> : <><Heading eyebrow="STAFF WORKSPACE" title="Workspace unavailable" detail="Institution sign-in and administrative APIs are not connected." /><Notice>No real student, exam, or audit data is shown.</Notice></>}</div></main></div>
+  const role = useSession().signedIn?.user.role
+  const visible = nav.filter(([path]) => mockMode || (path === 'publish' ? role === 'ADMIN' : !['audit', 'integrity'].includes(path) || role === 'ADMIN' || role === 'AUDITOR'))
+  return <div className="workspace"><aside className="sidebar no-print"><Brand /><p>STAFF WORKSPACE</p><nav aria-label="Workspace navigation">{visible.map(([path, label, Icon]) => <NavLink key={label} to={path ? `/admin/${path}` : '/admin'} end={!path}><Icon size={17} />{label}</NavLink>)}</nav><Link className="sidebar-bottom" to="/verify">Public verification <ArrowRight size={15} /></Link></aside><main id="main" className="workspace-main"><div className="workspace-top no-print"><span><Activity size={17} /> Examination integrity</span>{!mockMode && role ? <div className="actions"><Chip>{role}</Chip><SignOut /></div> : <Chip tone={mockMode ? 'amber' : 'neutral'}>{mockMode ? 'Demo workspace' : 'Signed out'}</Chip>}</div><div className="workspace-body">{mockMode ? <DemoWorkspace><Outlet /></DemoWorkspace> : <RequireAccount roles={['ADMIN', 'APPROVER', 'AUDITOR']}><Outlet /></RequireAccount>}</div></main></div>
 }
 
 export function Overview() {

@@ -12,7 +12,11 @@ npm ci
 npm run dev
 ```
 
-Open the URL printed by Vite. To configure locally, copy `.env.example` to `.env.local` and restart Vite. `VITE_MOCK_MODE=true` (default) displays synthetic records. Demo publications and correction proposals only persist while navigating the staff workspace; leaving it or reloading resets them. Set `VITE_MOCK_MODE=false` to hide synthetic records and disable the demo workspace. `VITE_API_BASE_URL` is reserved for the live adapter; changing it does not activate any endpoint. `VITE_` variables are public build-time configuration, never secrets.
+Open `http://localhost:5173`. Copy `.env.example` to `.env.local` and restart Vite after changing configuration. `VITE_MOCK_MODE=true` (default) displays synthetic records. Demo publications and correction proposals last only while navigating the staff workspace.
+
+For live mode, set `VITE_MOCK_MODE=false`, `VITE_API_BASE_URL=http://localhost:3000`, and `VITE_INSTITUTION_PUBLIC_KEY` to the **independently supplied SPKI PEM public key** (literal `\n` separators are accepted). Set backend `FRONTEND_ORIGIN=http://localhost:5173`. Use seeded credentials directly in the login form; on refresh, sign in again. All `VITE_` variables are public: never set a private key, password or token there.
+
+The live marksheet renders only after the browser independently checks the receipt and evidence. Corrections use downloaded proposal JSON, the institution's offline signer (`node scripts/sign-proposal.js proposal.json own-private.pem` in the backend checkout), and detached signatures pasted under each approver's account. Private keys stay with the signer.
 
 ## Demo walkthrough
 
@@ -30,6 +34,8 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Set `PLAYWRIGHT_CHANNEL=chrome` to use an installed Chrome instead of downloading Chromium. The browser suite starts Vite on local ports 4173 and 4174. Production output is `dist/`; configure the host to serve `index.html` for application deep links, including `/verify?ref=…`. Serve production over HTTPS.
+Set `PLAYWRIGHT_CHANNEL=chrome` to use installed Chrome. The browser suite starts local frontend servers on ports 4173–4175. Fetch the backend ref or point `VERIMARK_PROOF_VECTORS` at its `fixtures/proof-vectors.json` to exercise the signed browser vectors. Optional real API checks are described in [Integration notes](INTEGRATION_NOTES.md).
+
+Production output is `dist/`; serve over HTTPS with SPA fallback for `/verify?receipt=…` and other deep links. Use a frontend origin reachable by the phone that scans a printed QR; localhost works only on the machine serving it. Do not log or share receipt URLs indiscriminately: the URL grants access to proof data.
 
 See [Integration notes](INTEGRATION_NOTES.md) for backend requirements, [Progress](FRONTEND_PROGRESS.md) for coverage, and [Handoff](FRONTEND_HANDOFF.md) for resuming work.
