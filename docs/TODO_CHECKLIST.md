@@ -166,26 +166,84 @@ Use this document to track progress pointer-by-pointer. Check off each item as y
 
 ---
 
-## Phase 10: Git & Coordination (Both)
+## Phase 10: Frontend Open & Run (Frontend Only)
 
 | # | Task | Owner | Status |
 |---|------|-------|--------|
-| 10.1 | Backend: Never push to `frontend` branch | Backend | |
-| 10.2 | Frontend: Never push to `backend/h8-core` branch | Frontend | |
-| 10.3 | No force-push or history rewrite | Both | |
-| 10.4 | Report API contract mismatches immediately | Both | |
-| 10.5 | Coordinate missing endpoints before implementing | Both | |
-| 10.6 | Push final demo-ready code | Both | |
+| 10.1 | Frontend partner opens/clones the frontend project folder | Frontend | |
+| 10.2 | Install frontend dependencies: `npm install` | Frontend | |
+| 10.3 | Set `VITE_API_BASE_URL=http://localhost:3000` (or your backend's LAN URL) | Frontend | |
+| 10.4 | Start the frontend dev server: `npm run dev` (typically Vite on port 5173) | Frontend | |
+| 10.5 | Confirm frontend opens in browser at `http://localhost:5173` | Frontend | |
+| 10.6 | Share the frontend URL with the backend engineer | Frontend | |
+
+---
+
+## Phase 11: Backend Open & Run (Backend Only)
+
+| # | Task | Owner | Status |
+|---|------|-------|--------|
+| 11.1 | Backend engineer starts PostgreSQL cluster if stopped: `npm run dev:setup` | Backend | |
+| 11.2 | Backend engineer starts the API: `npm start` (listens on 127.0.0.1:3000) | Backend | |
+| 11.3 | Confirm backend health: `GET http://localhost:3000/health` returns `{status:"ok"}` | Backend | |
+| 11.4 | Share the backend URL with the frontend partner | Backend | |
+
+---
+
+## Phase 12: Joint Verification — Both Running Together (Both)
+
+| # | Task | Owner | Status |
+|---|------|-------|--------|
+| 12.1 | Backend running: `npm start` on port 3000 | Backend | |
+| 12.2 | Frontend running: `npm run dev` on port 5173 | Frontend | |
+| 12.3 | Open frontend in browser: `http://localhost:5173` | Frontend | |
+| 12.4 | Login via frontend → calls backend `POST /auth/login` | Both | |
+| 12.5 | View results via frontend → calls backend `GET /results` | Both | |
+| 12.6 | Publish result via frontend → calls backend `POST /results` | Both | |
+| 12.7 | Verify QR/marksheet via frontend → calls backend `GET /verify?receipt=` | Both | |
+| 12.8 | Confirm both servers are running simultaneously without errors | Both | |
+| 12.9 | Take a screenshot or note the working demo for the hackathon | Both | |
+
+---
+
+## Phase 13: Git & Coordination (Both)
+
+| # | Task | Owner | Status |
+|---|------|-------|--------|
+| 13.1 | Backend: Never push to `frontend` branch | Backend | |
+| 13.2 | Frontend: Never push to `backend/h8-core` branch | Frontend | |
+| 13.3 | No force-push or history rewrite | Both | |
+| 13.4 | Report API contract mismatches immediately | Both | |
+| 13.5 | Coordinate missing endpoints before implementing | Both | |
+| 13.6 | Push final demo-ready code | Both | |
 
 ---
 
 ## Quick Status Summary
 
 - **Backend:** 100% complete, tested, pushed to `backend/h8-core`
-- **Frontend:** Not started — waiting for you to clone and begin
+- **Frontend:** Not started — waiting for your partner to clone and begin
 - **Shared contract:** `docs/API.md`, `docs/openapi.json`, `docs/frontend-contract/api.types.ts`
 - **Fixtures:** `fixtures/proof-vectors.json`, `fixtures/frontend.json`
 - **PDF prompt:** `Frontend_Partner_Prompt.pdf` (6 pages, ready to send)
+- **Numbered checklist:** `docs/TODO_CHECKLIST.md` (Phases 0–13)
+
+---
+
+## How to Know It's Working (Joint Verification)
+
+When both of you are ready, follow **Phase 12** exactly:
+
+| Step | What You Do | What Your Partner Does | How You Know It Works |
+|------|-------------|----------------------|----------------------|
+| 12.1 | Run `npm start` — backend on port 3000 | — | You see "VeriMark API listening" |
+| 12.2 | — | Run `npm run dev` — frontend on port 5173 | They see Vite dev server started |
+| 12.3 | — | Open `http://localhost:5173` in browser | Frontend loads |
+| 12.4 | — | Login → calls your `POST /auth/login` | You see login succeed |
+| 12.5 | — | View results → calls your `GET /results` | You see data returned |
+| 12.6 | — | Publish result → calls your `POST /results` | You see result created |
+| 12.7 | — | Verify QR → calls your `GET /verify?receipt=` | You see verification pass |
+| 12.8 | Both confirm no errors | Both confirm no errors | Demo is working |
 
 ---
 
@@ -195,3 +253,4 @@ Use this document to track progress pointer-by-pointer. Check off each item as y
 2. **Tell them** their branch is `frontend` and to pull `backend/h8-core` for docs.
 3. **Share** your frontend dev origin (e.g., `http://localhost:5173`) so backend can set `FRONTEND_ORIGIN`.
 4. **Start** at Pointer 0.1 and work down the list.
+5. **When both are done**, run Phase 12 (Joint Verification) together to confirm everything works.
